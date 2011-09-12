@@ -26,7 +26,18 @@
 
 %% Argument Parsing...
 
-parse_args(Args, Options) ->
+parse_args(Args, Options0) ->
+    Options = case lists:keymember("--(?<option>.*)", 1, Options0) of
+        false ->
+            [{"--(?<option>.*)",
+                fun([X]) -> {erlang:list_to_atom(X), enabled} end, [option],
+                [{"verbose",
+                    "Print lots of info out during configure process", disabled},
+                 {"help", "Print out help and exit", undefined}]}|Options0];
+        true ->
+            libconf:abort("Internal Error: ~n"
+                          "The --(option) group is reversed for internal use!")
+    end,
     Opts = lists:flatten(lists:foldl(
         fun(Arg, Conf) -> [parse(Arg, Options)|Conf] end, [], Args)),
     apply_defaults(Opts, Options).

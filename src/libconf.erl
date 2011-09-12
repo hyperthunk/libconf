@@ -31,7 +31,7 @@ configure(Args, AvailableOpts, Rules) ->
     put(verbose, proplists:get_value(verbose, Options)),
     case lists:keymember(help, 1, Options) of
         true ->
-            opt:help(Options), halt(0);
+            opt:help(AvailableOpts), halt(0);
         false ->
             log:out("~s~n", [printable(Options)]),
             Env = env:inspect(Options),
