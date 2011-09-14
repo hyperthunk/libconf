@@ -26,10 +26,10 @@
 
 -export([locate_escript/1, default_escript_exe/0]).
 -export([find_executable/1, find_executable/2]).
--export([executable_name/1]).
+-export([executable_name/1, library_path_env/1, path_sep/1]).
 -export([locate_library/2, detect_arch/1, load_path/1]).
--export([code_dir/0]).
--export([relative_path/1]).
+-export([code_dir/0, relative_path/1]).
+
 -export([inspect/1]).
 
 %% TODO: refactor the inspect_? code to pass around the OS type/family and match on it
@@ -130,6 +130,14 @@ load_path(Path) ->
             string:join([Path | Parts], PathSep)
     end,
     {ENV, NewPath}.
+
+%% TODO: make this work across the board...
+library_path_env({windows, _})  -> "LIB";
+library_path_env({darwin, _})   -> "DYLD_LIBRARY_PATH";
+library_path_env(_)             -> "LD_LIBRARY_PATH".
+
+path_sep({windows,_}) -> ";";
+path_sep(_)           -> ":".
 
 locate_escript(undefined) ->
     default_escript_exe();

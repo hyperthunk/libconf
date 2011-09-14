@@ -22,7 +22,34 @@
 %% -----------------------------------------------------------------------------
 -module(opt).
 
--export([parse_args/2, help/1]).
+-export([parse_args/2, help/1, eval/2]).
+
+eval(S, Opts) ->
+    case re:split(S, "(\\$)\\{([\\w]+)\\}", [{return, list}, trim]) of
+        [Data] ->
+            Data;
+        Parts when is_list(Parts) ->
+            lists:flatten(lists:reverse(lists:foldl(merge_opts(Opts), [], Parts)))
+    end.
+
+merge_opts(Opts) ->
+    fun(E, [H|Acc]) when H == "$" ->
+           [option(E, Opts)|Acc];
+       (E, Acc) ->
+           io:format("Merging ~p into ~p~n", [E, Acc]),
+           [E|Acc]
+    end.
+
+option(E, Opts) when is_list(E) ->
+    case proplists:is_defined(E, Opts) of
+        true ->  proplists:get_value(E, Opts);
+        false -> option(list_to_atom(E), Opts)
+    end;
+option(E, Opts) when is_atom(E) ->
+    case proplists:get_value(E, Opts) of
+        undefined -> E;
+        Other -> Other
+    end.
 
 %% Argument Parsing...
 

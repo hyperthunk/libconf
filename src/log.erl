@@ -29,7 +29,6 @@ logfile() ->
     env:relative_path(["build", "cache", "config.log"]).
 
 reset() ->
-    io:format("writing config.log to ~s~n", [logfile()]),
     TimeStamp = io_lib:format(lists:duplicate(82, "-") ++
                               "Config Run: ~s\n" ++
                               lists:duplicate(82, "-"),
@@ -55,5 +54,6 @@ verbose(Msg, Args) ->
 out(Msg) -> out(Msg, []).
 
 out(Msg, Args) ->
-    file:write_file(logfile(), io_lib:format(Msg, Args)),
-    io:format(Msg, Args).
+    Data = io_lib:format(Msg, Args),
+    file:write_file(logfile(), Data, [append]),
+    erlang:display(Data).

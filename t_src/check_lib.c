@@ -23,6 +23,6 @@
 #include {{ incl }}
 
 int main() {
-    {{ TODO_PUT_THIS_NAME_RIGHT }}
+    {{ stdout_check }}
     return( 0 );
 };

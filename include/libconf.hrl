@@ -21,12 +21,13 @@
 %% THE SOFTWARE.
 %% -----------------------------------------------------------------------------
 -record(check, {
-    name        :: string(),
-    type        :: 'include' | 'library',
-    data        :: term(),
-    capture     :: string() | binary(),
-    output      :: string(),
-    result      :: 'passed' | 'failed'
+    mandatory = false   :: boolean(),
+    name                :: string(),
+    type                :: 'include' | 'library',
+    data                :: term(),
+    capture             :: string() | binary(),
+    output              :: string(),
+    result              :: 'passed' | 'failed'
 }).
 
 -record(require, {
