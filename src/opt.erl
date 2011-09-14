@@ -120,7 +120,7 @@ exit_badarg(Arg) ->
     libconf:abort("Unrecognised Option(s) ~s~n", [Arg]).
 
 help(Options) ->
-    log:out(
+    io:format(
 "`configure' configures this package to adapt to any supported system.
 
 Usage: ./configure [OPTIONS]
@@ -132,18 +132,18 @@ Options:~n"),
             Spacer = lists:concat(lists:duplicate(28 - length(Text), " ")),
             case Default of
                 undefined ->
-                    log:out("~s~s~s~s~n", [Indent, Text, Spacer, Comments]);
+                    io:format("~s~s~s~s~n", [Indent, Text, Spacer, Comments]);
                 Atom when is_atom(Atom) ->
-                    log:out("~s~s~s~s [~p]~n",
+                    io:format("~s~s~s~s [~p]~n",
                         [Indent, Text, Spacer, Comments, Default]);
                 String when is_list(String) ->
-                    log:out("~s~s~s~s [~s]~n",
+                    io:format("~s~s~s~s [~s]~n",
                         [Indent, Text, Spacer, Comments, Default])
             end;
            (break, _) ->
-            log:out("~n");
+            io:format("~n");
            (Thing2, _) ->
-            log:out("~s~p~n", [Indent, Thing2])
+            io:format("~s~p~n", [Indent, Thing2])
         end,
     [ F(I, A) || A <- Options, I <- (element(4, A) ++ [break]) ].
 

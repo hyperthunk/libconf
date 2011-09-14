@@ -56,4 +56,4 @@ out(Msg) -> out(Msg, []).
 out(Msg, Args) ->
     Data = io_lib:format(Msg, Args),
     file:write_file(logfile(), Data, [append]),
-    erlang:display(Data).
+    io:format(Data).

@@ -1,0 +1,25 @@
+-module(load_env).
+-compile(export_all).
+
+main([OptFile]) ->
+    Options = file:consult(OptFile),
+    io:format("Writing config cache [~s]~n", [filename()]),
+    file:write_file(filename(), printable(config(Options)), [write]).
+
+config(_Options) ->
+    {Alloc, Vsn, _, _} = erlang:system_info(allocator),
+    [
+        {otp_version, erlang:system_info(otp_release)},
+        {erts_version, erlang:system_info(version)},
+        {smp_available, erlang:system_info(smp_support)},
+        {libc, {Alloc, string:join(Vsn, ".")}},
+        {driver_vsn, erlang:system_info(driver_version)},
+        {async_io, erlang:system_info(kernel_poll)}
+    ].
+
+printable(Term) ->
+    erl_prettypr:format(erl_parse:abstract(Term)) ++ ".".
+
+filename() ->
+    filename:join([filename:dirname(escript:script_name()), 
+                   "build", "cache", "config.cache"]).

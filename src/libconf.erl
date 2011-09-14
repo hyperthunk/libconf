@@ -24,41 +24,25 @@
 
 -include("libconf.hrl").
 -export([abort/1, abort/2]).
--export([configure/3]).
+-export([configure/3, printable/1]).
 
 configure(Args, AvailableOpts, Rules) ->
+    log:reset(),
     Options = opt:parse_args(Args, AvailableOpts),
     put(verbose, proplists:get_value(verbose, Options)),
     case lists:keymember(help, 1, Options) of
         true ->
             opt:help(AvailableOpts), halt(0);
         false ->
-            log:out("~s~n", [printable(Options)]),
+            log:verbose("~s~n", [printable(Options)]),
             Env = env:inspect(Options),
-            log:out("~s~n", [printable(Env)]),
+            log:verbose("~s~n", [printable(Env)]),
             apply_config(Env, Rules, Options)
     end.
 
-apply_config(Env, Templates, Options) ->
-    Setup = lists:map(fun(T) ->
-                         configure_template(T, Env, Options) end, Templates),
-    case has_errors(Setup) of
-        true ->
-            show_errors_and_exit(Setup);
-        false ->
-            apply_templates(Setup)
-    end.
-
-check("arch", _Env, _Options) ->
-    ok.
-
-configure_template(_Template, _Env, _Options) -> ok.
-
-has_errors(_Setup) -> false.
-
-show_errors_and_exit(_Setup) -> halt(1).
-
-apply_templates(_Setup) -> ok.
+apply_config(Env, Rules, Options) ->
+    Checks = proplists:get_value(checks, Rules, []),
+    [ check:check(Check, Env, Options) || Check <- Checks ].
 
 %% Utilities
 

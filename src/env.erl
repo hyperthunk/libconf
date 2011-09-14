@@ -57,7 +57,7 @@ run_inspect_env(OptFile, Options, false) ->
     BinDir = filename:join(proplists:get_value("erlang", Options), "bin"),
     case locate_escript(BinDir) of
         {default, _Exe} ->
-            Path = relative_path(["build", "load_env.erl"]),
+            Path = ensure_load_env_module(),
             case compile:file(Path,
                         [verbose,report_errors,report_warnings,export_all,
                          {outdir,relative_path(["build", "cache"])}]) of
@@ -83,15 +83,25 @@ run_inspect_env(OptFile, Options, false) ->
     end.
 
 run_external(Escript, OptFile) ->
-    LoaderResults = sh:exec(Escript ++ " " ++
-                       relative_path(["build", "load_env.erl"]) ++ " " ++
-                       OptFile),
+    LoadEnvModule = ensure_load_env_module(),
+    LoaderResults = sh:exec(Escript ++ " " ++ LoadEnvModule ++ " " ++ OptFile),
     case LoaderResults of
         {error, {_Rc, _Data}=Err} ->
             %% TODO: deal with output messages to the user
             libconf:abort("ERROR: ~p~n", [Err]);
         Ok ->
             Ok
+    end.
+
+ensure_load_env_module() ->
+    File = relative_path(["build", "load_env.erl"]),
+    case filelib:is_regular(File) of
+        true ->
+            File;
+        false ->
+            {ok, Bin} = load_env_template:render(),
+            file:write_file(File, Bin, [create]),
+            File
     end.
 
 inspect_os() ->
