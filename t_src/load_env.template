@@ -3,7 +3,7 @@
 
 main([OptFile]) ->
     Options = file:consult(OptFile),
-    io:format("Writing config cache [~s]~n", [filename()]),
+    io:format("writing config cache [~s]~n", [filename()]),
     file:write_file(filename(), printable(config(Options)), [write]).
 
 config(_Options) ->
@@ -21,5 +21,4 @@ printable(Term) ->
     erl_prettypr:format(erl_parse:abstract(Term)) ++ ".".
 
 filename() ->
-    filename:join([filename:dirname(escript:script_name()), 
-                   "build", "cache", "config.cache"]).
+    filename:join([filename:dirname(escript:script_name()), "config.cache"]).

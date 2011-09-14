@@ -58,6 +58,7 @@ run_inspect_env(OptFile, Options, false) ->
     case locate_escript(BinDir) of
         {default, _Exe} ->
             Path = ensure_load_env_module(),
+            log:verbose("compiling load_env...~n"),
             case compile:file(Path,
                         [verbose,report_errors,report_warnings,export_all,
                          {outdir,relative_path(["build", "cache"])}]) of
@@ -94,13 +95,13 @@ run_external(Escript, OptFile) ->
     end.
 
 ensure_load_env_module() ->
-    File = relative_path(["build", "load_env.erl"]),
+    File = relative_path(["build", "cache", "load_env.erl"]),
     case filelib:is_regular(File) of
         true ->
             File;
         false ->
             {ok, Bin} = load_env_template:render(),
-            file:write_file(File, Bin, [create]),
+            file:write_file(File, list_to_binary(Bin), [write]),
             File
     end.
 

@@ -36,7 +36,6 @@ merge_opts(Opts) ->
     fun(E, [H|Acc]) when H == "$" ->
            [option(E, Opts)|Acc];
        (E, Acc) ->
-           io:format("Merging ~p into ~p~n", [E, Acc]),
            [E|Acc]
     end.
 

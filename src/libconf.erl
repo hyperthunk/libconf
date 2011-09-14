@@ -42,7 +42,16 @@ configure(Args, AvailableOpts, Rules) ->
 
 apply_config(Env, Rules, Options) ->
     Checks = proplists:get_value(checks, Rules, []),
-    [ check:check(Check, Env, Options) || Check <- Checks ].
+    Results = [ check:check(Check, Env, Options) || Check <- Checks ],
+    case [ C || C <- Results, C#check.result =/= 'passed' andalso
+                              C#check.mandatory =:= true ] of
+        [] ->
+            ok;
+        Failures ->
+            [ log:out("Mandatory Check ~p failed: ~s~n", [Name, Err]) || 
+              #check{ name=Name, output=Err } <- Failures ],
+            abort("Cannot proceed. Please fix these issues and try again.~n")
+    end.
 
 %% Utilities
 

@@ -31,14 +31,16 @@ check(C=#check{ name=Name, type=library, capture=Capture,
 
     NameAsString = as_string(Name),
     log:out("check ~s... ", [NameAsString]),
-    Result = case env:locate_library(LibPath, Find) of
+    Result = case env:locate_library(opt:eval(LibPath, Config), 
+                                     opt:eval(Find, Config)) of
         undefined ->
             C#check{ result='failed', output=as_string(Name) ++ " not found" };
         #library{ lib=_SoFile, arch=LibArch } ->
             LdPath = [ opt:eval(I, Config) || I <- CodePath ],
             IncludePath = [ opt:eval(I, Config) || I <- InclPath ],
             Src = check_lib(NameAsString, Include, Capture),
-            Target = filename:basename(Src, ".c"),
+            Target = filename:join(filename:dirname(Src), 
+                                   filename:basename(Src, ".c")),
             case cc:compile_and_link(Src, Target, IncludePath,
                                      LdPath, LibArch, OS, Config) of
                 {error, ErrMsg} when is_list(ErrMsg) ->
@@ -67,11 +69,12 @@ check_lib(Name, Include, Capture) ->
         undefined ->
             [{incl, Include}];
         _ ->
-            [{incl, Include}|{stdout_check, Capture}]
+            [{incl, Include},{stdout_check, Capture}]
     end,
     {ok, Bin} = check_lib_template:render(dict:from_list(Vars)),
     SrcFile = filename:join(outdir(), "check_" ++ Name ++ ".c"),
-    ok = file:write_file(SrcFile, Bin, [create]),
+    %% io:format("writing ~s to ~s~n", [Bin, SrcFile]),
+    ok = file:write_file(SrcFile, Bin, [write]),
     SrcFile.
 
 outdir() ->

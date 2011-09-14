@@ -33,8 +33,8 @@ compile_and_link(Src, Target, IncludePath, LdPath, LibArch, OS, Config) ->
         CC ->
             ArchFlags = calculate_arch_flags(LibArch),
             IncludeFlags = string:join([ "-I" ++ I || I <- IncludePath ], " "),
-            Cmd = io_lib:format("~s ~s ~s -o ~s ~s", 
-                        [CC, ArchFlags, IncludeFlags, Target, Src]),
+            Cmd = lists:flatten(io_lib:format("~s ~s ~s -o ~s ~s", 
+                        [CC, ArchFlags, IncludeFlags, Target, Src])),
             LinkerEnv = string:join(LdPath, env:path_sep(OS)),
             LinkerVar = env:library_path_env(OS),
             sh:exec(Cmd, [{env, [{LinkerVar, LinkerEnv}]}])

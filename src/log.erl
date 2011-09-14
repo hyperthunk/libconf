@@ -29,11 +29,11 @@ logfile() ->
     env:relative_path(["build", "cache", "config.log"]).
 
 reset() ->
-    TimeStamp = io_lib:format(lists:duplicate(82, "-") ++
+    TimeStamp = io_lib:format(lists:duplicate(82, "-") ++ "~n" ++
                               "Config Run: ~s\n" ++
-                              lists:duplicate(82, "-"),
+                              lists:duplicate(82, "-") ++ "~n",
                               [iso_8601_fmt(erlang:localtime())]),
-    file:write_file(logfile(), TimeStamp, [create]).
+    file:write_file(logfile(), TimeStamp, [write]).
 
 iso_8601_fmt(DateTime) ->
     {{Year,Month,Day},{Hour,Min,Sec}} = DateTime,
