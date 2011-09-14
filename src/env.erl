@@ -27,31 +27,27 @@
 -export([locate_escript/1, default_escript_exe/0]).
 -export([find_executable/1, find_executable/2]).
 -export([executable_name/1]).
--export([check_arch/1, wordsize/0, inspect_os/0]).
 -export([locate_library/2, detect_arch/1, load_path/1]).
 -export([code_dir/0]).
 -export([relative_path/1]).
-
 -export([inspect/1]).
 
 %% TODO: refactor the inspect_? code to pass around the OS type/family and match on it
 
 inspect(Options) ->
-    OptFile = env:relative_path(["build", "cache", "config.options"]),
+    OptFile = relative_path(["build", "cache", "config.options"]),
     log:out("writing config.options to ~s~n", [OptFile]),
     file:write_file(OptFile, libconf:printable(Options)),
     run_inspect_env(OptFile, Options, false),
-    ErlEnv = file:consult(env:relative_path(["build", "cache", "config.cache"])),
-    %% OciEnv = inspect_oci(Options),
-    #os_conf{
-        os=env:inspect_os(),
-        arch=env:wordsize(),
-        erlang=ErlEnv
-    }.
+    ErlEnv = file:consult(relative_path(["build", "cache", "config.cache"])),
+    OS = inspect_os(),
+    Arch = detect_os_arch(OS),
+    WordSize = detect_long_bit(OS),
+    #os_conf{ os=OS, arch=Arch, wordsize=WordSize, erlang=ErlEnv }.
 
 run_inspect_env(OptFile, Options, true) ->
     BinDir = filename:join(proplists:get_value("erlang", Options), "bin"),
-    case env:locate_escript(BinDir) of
+    case locate_escript(BinDir) of
         {default, Exe} ->
             run_external(Exe, OptFile);
         Escript when is_list(Escript) ->
@@ -59,12 +55,12 @@ run_inspect_env(OptFile, Options, true) ->
     end;
 run_inspect_env(OptFile, Options, false) ->
     BinDir = filename:join(proplists:get_value("erlang", Options), "bin"),
-    case env:locate_escript(BinDir) of
+    case locate_escript(BinDir) of
         {default, _Exe} ->
-            Path = env:relative_path(["build", "load_env.erl"]),
+            Path = relative_path(["build", "load_env.erl"]),
             case compile:file(Path,
                         [verbose,report_errors,report_warnings,export_all,
-                         {outdir,env:relative_path(["build", "cache"])}]) of
+                         {outdir,relative_path(["build", "cache"])}]) of
                 T when is_tuple(T) ->
                     [H|Rest] = erlang:tuple_to_list(T),
                     case H of
@@ -72,7 +68,7 @@ run_inspect_env(OptFile, Options, false) ->
                             ModName = erlang:hd(Rest),
                             log:out("Running ~p using the current emulator~n",
                                 [ModName]),
-                            code:add_patha(env:relative_path(["build", "cache"])),
+                            code:add_patha(relative_path(["build", "cache"])),
                             ModName:main([OptFile]);
                         error ->
                             log:out("Unable to compile load_env.erl - "
@@ -88,7 +84,7 @@ run_inspect_env(OptFile, Options, false) ->
 
 run_external(Escript, OptFile) ->
     LoaderResults = sh:exec(Escript ++ " " ++
-                       env:relative_path(["build", "load_env.erl"]) ++ " " ++
+                       relative_path(["build", "load_env.erl"]) ++ " " ++
                        OptFile),
     case LoaderResults of
         {error, {_Rc, _Data}=Err} ->
@@ -98,6 +94,16 @@ run_external(Escript, OptFile) ->
             Ok
     end.
 
+inspect_os() ->
+    case os:type() of
+        {unix, _} ->
+            OS = uname("-s"),
+            Vsn = os_vsn(),
+            {OS, Vsn};
+        {win32, _} ->
+            {windows, unknown}
+    end.
+
 locate_library(Path, Lib) ->
     case filelib:fold_files(Path, Lib, true,
                             fun(F, Acc) -> [F|Acc] end, []) of
@@ -105,25 +111,6 @@ locate_library(Path, Lib) ->
             undefined;
         [LibFile|_] ->
             #library{ path=Path, lib=LibFile, arch=detect_arch(LibFile) }
-    end.
-
-detect_arch(LibPath) ->
-    case re:run(os:cmd("file " ++ LibPath),
-                "(64-bit|i686|x86_64)", [{capture,first,list}]) of
-        {match, [M|_]} ->
-            case M of
-                "64-bit" -> 'i686';
-                Arch -> list_to_atom(Arch)
-            end;
-        _ ->
-            case re:run(os:cmd("file " ++ LibPath),
-                        "(32-bit|i386|x86)", [{capture,first,list}]) of
-                {match, [A|_]} ->
-                    case A of
-                        "32-bit" -> 'x86';
-                        Other32BitArch -> list_to_atom(Other32BitArch)
-                    end
-            end
     end.
 
 load_path(Path) ->
@@ -170,40 +157,55 @@ find_executable(Exe, Path) when is_list(Exe) andalso is_list(Path) ->
 executable_name(Exe) ->
     case os:type() of
         {win32,_} ->
-            case lists:suffix(".exe", Exe) of
-                true ->
-                    Exe;
+            case lists:suffix(".bat", Exe) of
+                true -> Exe;
                 false ->
-                    string:join([Exe, "exe"], ".")
+                    case lists:suffix(".exe", Exe) of
+                        true ->
+                            Exe;
+                        false ->
+                            string:join([Exe, "exe"], ".")
+                    end
             end;
         _ ->
             Exe
     end.
 
-check_arch(Arch) ->
-    case wordsize() =:= Arch of
-        true -> enabled;
-        false -> disabled
+detect_arch(LibPath) ->
+    grep_for_arch(trim_cmd(os:cmd("file " ++ LibPath))).
+
+detect_os_arch({windows,_}) -> 
+    %% TODO: handle on windows
+    'x86';
+detect_os_arch(_) ->
+    grep_for_arch(uname("-a")).
+
+detect_long_bit({windows,_}) -> 
+    %% TODO: fix on windows
+    32;
+detect_long_bit(_) ->
+    list_to_integer(trim_cmd(os:cmd("getconf LONG_BIT"))).
+
+grep_for_arch(String) ->
+    case re:run(String, "(64-bit|x86_64|ia64|amd64)", [{capture,first,list}]) of
+        {match, [_M|_]} -> 'x86_64';
+        _ ->
+            case re:run(String, "(32-bit|i386|i486|i586|i686|x86)", 
+                        [{capture,first,list}]) of
+                {match, [_|_]} ->
+                    %% TODO: deal with ia32 and amd32
+                    'x86'
+            end
     end.
 
-wordsize() ->
-    try erlang:system_info({wordsize, external}) of
-        Val ->
-            integer_to_list(8 * Val)
-    catch
-        error:badarg ->
-            integer_to_list(8 * erlang:system_info(wordsize))
-    end.
+os_vsn() ->
+    [ list_to_integer(I) || I <- string:tokens(uname("-r"), ".") ].
 
-inspect_os() ->
-    case os:type() of
-        {unix, undefined} ->
-            posix;
-        {unix, Other} ->
-            Other;
-        {win32, _} ->
-            windows
-    end.
+uname(Flag) ->
+    trim_cmd(os:cmd("uname " ++ Flag)).
+
+trim_cmd(Output) ->
+    re:replace(Output, "\\s", "", [{return, list}]).
 
 code_dir() ->
     case os:getenv("ERL_LIBS") of
@@ -214,5 +216,3 @@ code_dir() ->
 relative_path(SuffixList) ->
     filename:absname(filename:join(filename:dirname(escript:script_name()),
                      filename:join(SuffixList))).
-
-

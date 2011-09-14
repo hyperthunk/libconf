@@ -40,21 +40,18 @@ find_compiler(Options) ->
             UserSpecified
     end.
 
-calculate_arch_flags(Arch) when Arch =:= 'i686' orelse
-                                Arch =:= 'x86_64' orelse
-                                Arch =:= 'ia64' orelse
-                                Arch =:= 'amd64' ->
+calculate_arch_flags('x86_64') ->
     case os:type() of
         {win32,_} ->
             %% consult http://msdn.microsoft.com/en-us/library/x4d2c09s.aspx
-            %% and figure out how to handle amd64
+            %% and figure out how to handle amd64 on both and ia64 on unix
             "ia64";
         {unix,darwin} ->
             "-arch x86_64";
         {unix,_} ->
             "-m64"
     end;
-calculate_arch_flags(_Arch) ->
+calculate_arch_flags('x86') ->
     case os:type() of
         {win32,_} ->
             %% ref http://msdn.microsoft.com/en-us/library/x4d2c09s.aspx

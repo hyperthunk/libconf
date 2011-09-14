@@ -22,7 +22,24 @@
 %% -----------------------------------------------------------------------------
 -module(log).
 
+-export([reset/0]).
 -export([verbose/1, verbose/2, out/1, out/2]).
+
+logfile() ->
+    env:relative_path(["build", "cache", "config.log"]).
+
+reset() ->
+    io:format("writing config.log to ~s~n", [logfile()]),
+    TimeStamp = io_lib:format(lists:duplicate(82, "-") ++
+                              "Config Run: ~s\n" ++
+                              lists:duplicate(82, "-"),
+                              [iso_8601_fmt(erlang:localtime())]),
+    file:write_file(logfile(), TimeStamp, [create]).
+
+iso_8601_fmt(DateTime) ->
+    {{Year,Month,Day},{Hour,Min,Sec}} = DateTime,
+    io_lib:format("~4.10.0B-~2.10.0B-~2.10.0B ~2.10.0B:~2.10.0B:~2.10.0B",
+        [Year, Month, Day, Hour, Min, Sec]).
 
 verbose(Msg) ->
     verbose(Msg, []).
@@ -37,4 +54,6 @@ verbose(Msg, Args) ->
 
 out(Msg) -> out(Msg, []).
 
-out(Msg, Args) -> io:format(Msg, Args).
+out(Msg, Args) ->
+    file:write_file(logfile(), io_lib:format(Msg, Args)),
+    io:format(Msg, Args).

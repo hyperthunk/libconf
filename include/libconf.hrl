@@ -21,10 +21,21 @@
 %% THE SOFTWARE.
 %% -----------------------------------------------------------------------------
 -record(check, {
-    name                :: string(),
-    require_values      :: [string()],
-    require_templates   :: [string()],
-    require_data        :: [term()]
+    name        :: string(),
+    type        :: 'include' | 'library',
+    data        :: term(),
+    capture     :: string() | binary(),
+    output      :: string(),
+    result      :: 'passed' | 'failed'
+}).
+
+-record(require, {
+    path        = unknown   :: string(),
+    arch        = unknown   :: integer(),
+    find                    :: string(),
+    include                 :: string(),
+    incl_path               :: [string()],
+    code_path               :: [string()]
 }).
 
 -record(template, {
@@ -40,20 +51,13 @@
     arch  :: atom()
 }).
 
--record(lib_conf, {
-    dir         = unknown   :: string(),
-    version     = unknown   :: string(),
-    arch        = unknown   :: integer(),
-    incl_path   = []        :: string(),
-    ld_path                 :: undefined | {string(), string()}
-}).
-
--type(arch() :: 'ia64' | 'amd64' | 'x86_64' | 'x86' | 'i386' | 'i686').
+-type(arch() :: 'x86_64' | 'x86').
 
 -record(os_conf, {
-    os      = unknown   :: windows | darwin | unix,
-    arch    = unknown   :: arch(),
-    erlang  = unknown   :: [{atom(), term()}]
+    os          = unknown   :: 'unknown' | {atom(), 'unknown' | list(integer)},
+    arch        = unknown   :: 'unknown' | arch(),
+    wordsize    = unknown   :: 'unknown' | integer(),
+    erlang      = unknown   :: 'unknown' | [{atom(), term()}]
 }).
 
 -export_type([arch/0]).
