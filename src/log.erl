@@ -23,7 +23,7 @@
 -module(log).
 
 -export([reset/0]).
--export([verbose/1, verbose/2, out/1, out/2]).
+-export([verbose/1, verbose/2, out/1, out/2, to_file/1, to_file/2]).
 
 logfile() ->
     env:relative_path(["build", "cache", "config.log"]).
@@ -50,6 +50,13 @@ verbose(Msg, Args) ->
         _ ->
             ok
     end.
+
+to_file(Msg) ->
+    to_file(Msg, []).
+
+to_file(Msg, Args) ->
+    Data = io_lib:format(Msg, Args),
+    file:write_file(logfile(), Data, [append]).
 
 out(Msg) -> out(Msg, []).
 

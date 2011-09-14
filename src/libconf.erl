@@ -34,9 +34,9 @@ configure(Args, AvailableOpts, Rules) ->
         true ->
             opt:help(AvailableOpts), halt(0);
         false ->
-            log:verbose("~s~n", [printable(Options)]),
+            log:to_file("~s~n", [printable(Options)]),
             Env = env:inspect(Options),
-            log:verbose("~s~n", [printable(Env)]),
+            log:to_file("~s~n", [printable(Env)]),
             apply_config(Env, Rules, Options)
     end.
 
@@ -48,10 +48,14 @@ apply_config(Env, Rules, Options) ->
         [] ->
             ok;
         Failures ->
-            [ log:out("Mandatory Check ~p failed: ~s~n", [Name, Err]) || 
-              #check{ name=Name, output=Err } <- Failures ],
+            [ write_failure_logs(C) || C <- Failures ],
             abort("Cannot proceed. Please fix these issues and try again.~n")
     end.
+
+write_failure_logs(#check{ name=Name, output=Err }) ->
+    log:out("Mandatory Check ~p failed. "
+              "See build/cache/config.log for details.~n", [Name]),
+    log:to_file("ERROR: ~s: ~s~n", [Name, Err]).
 
 %% Utilities
 
