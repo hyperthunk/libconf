@@ -20,9 +20,12 @@
 %% OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 %% THE SOFTWARE.
 %% -----------------------------------------------------------------------------
+-type(arch() :: 'x86_64' | 'x86').
+-export_type([arch/0]).
+
 -record(check, {
     mandatory = false   :: boolean(),
-    name                :: string(),
+    name                :: atom() | string(),
     type                :: 'include' | 'library',
     data                :: term(),
     capture             :: string() | binary(),
@@ -32,7 +35,7 @@
 
 -record(require, {
     path        = unknown   :: string(),
-    arch        = unknown   :: integer(),
+    arch        = unknown   :: arch(),
     find                    :: string(),
     include                 :: string(),
     incl_path               :: [string()],
@@ -41,9 +44,13 @@
 
 -record(template, {
     name        :: string(),
-    data        :: string(),
-    outfile     :: string(),
-    checks      :: [#check{}]
+    module      :: atom(),
+    pre_render  :: atom(),
+    post_render :: atom(),
+    output      :: string(),
+    checks      :: [string() | atom()],
+    data        :: [{string() | atom(), atom()}],
+    defaults    :: [term()]
 }).
 
 -record(library, {
@@ -52,13 +59,9 @@
     arch  :: atom()
 }).
 
--type(arch() :: 'x86_64' | 'x86').
-
 -record(os_conf, {
     os          = unknown   :: 'unknown' | {atom(), 'unknown' | list(integer)},
     arch        = unknown   :: 'unknown' | arch(),
     wordsize    = unknown   :: 'unknown' | integer(),
     erlang      = unknown   :: 'unknown' | [{atom(), term()}]
 }).
-
--export_type([arch/0]).

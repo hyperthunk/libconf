@@ -41,7 +41,7 @@ compile_and_link(Src, Target, IncludePath, LdPath, LibArch, OS, Config) ->
     end.
 
 find_compiler(Options) ->
-    case proplists:get_value("c-compiler", Options) of
+    case proplists:get_value("cc", Options) of
         undefined ->
             case os:type() of
                 {win32, _} ->
@@ -54,6 +54,8 @@ find_compiler(Options) ->
             log:verbose("Using user-specified compiler ~s~n", [UserSpecified]),
             UserSpecified
     end.
+
+%% TODO: resolve the link between $CC and required 64bit compilation flags
 
 calculate_arch_flags('x86_64') ->
     case os:type() of
@@ -75,4 +77,8 @@ calculate_arch_flags('x86') ->
             "-arch i386";
         {unix,_} ->
             "-m32"
-    end.
+    end;
+calculate_arch_flags(32) ->
+    calculate_arch_flags('x86');
+calculate_arch_flags(64) ->
+    calculate_arch_flags('x86_64').

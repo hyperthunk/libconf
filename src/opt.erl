@@ -25,7 +25,7 @@
 -export([parse_args/2, help/1, eval/2]).
 
 eval(S, Opts) ->
-    case re:split(S, "(\\$)\\{([\\w]+)\\}", [{return, list}, trim]) of
+    case re:split(S, "(\\$|\\%)\\{([^\\}]*)\\}", [{return, list}, trim]) of
         [Data] ->
             Data;
         Parts when is_list(Parts) ->
@@ -35,18 +35,28 @@ eval(S, Opts) ->
 merge_opts(Opts) ->
     fun(E, [H|Acc]) when H == "$" ->
            [option(E, Opts)|Acc];
+       (E, [T|Acc]) when T == "%" ->
+           [scope_eval(E, Opts)|Acc];
        (E, Acc) ->
            [E|Acc]
     end.
 
-option(E, Opts) when is_list(E) ->
-    case proplists:is_defined(E, Opts) of
-        true ->  proplists:get_value(E, Opts);
-        false -> option(list_to_atom(E), Opts)
-    end;
-option(E, Opts) when is_atom(E) ->
-    case proplists:get_value(E, Opts) of
-        undefined -> E;
+scope_eval(S, ScopeEnv) ->
+    S2 = re:replace(S, "(([\\w]+)\\.[\\w]+)", "kvc:path(\\1, Bindings)", 
+                    [{return, list}]) ++ ".",
+    log:to_file("scope_eval [~p] = ", [S2]),
+    {ok, Scanned, _} = erl_scan:string(S2),
+    {ok, Parsed} = erl_parse:parse_exprs(Scanned),
+    case erl_eval:exprs(Parsed, [{'Bindings', ScopeEnv}]) of
+        {value, Val, _} ->
+            log:to_file(io_lib:format("~p~n", [Val])), Val;
+        Other ->
+            log:to_file(" FAILURE [exception: ~p]~n", [Other]), S
+    end.
+
+option(E, Opts) ->
+    case kvc:path(E, Opts) of
+        [] -> E;
         Other -> Other
     end.
 
@@ -56,7 +66,7 @@ parse_args(Args, Options0) ->
     Options = case lists:keymember("--(?<option>.*)", 1, Options0) of
         false ->
             [{"--(?<option>.*)",
-                fun([X]) -> {erlang:list_to_atom(X), enabled} end, [option],
+                fun([X]) -> {X, enabled} end, [option],
                 [{"verbose",
                     "Print lots of info out during configure process", disabled},
                  {"help", "Print out help and exit", undefined}]}|Options0];

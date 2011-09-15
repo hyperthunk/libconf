@@ -24,23 +24,22 @@
 
 -include("libconf.hrl").
 -export([abort/1, abort/2]).
--export([configure/3, printable/1]).
+-export([configure/3, printable/1, as_string/1]).
 
 configure(Args, AvailableOpts, Rules) ->
     log:reset(),
     Options = opt:parse_args(Args, AvailableOpts),
-    put(verbose, proplists:get_value(verbose, Options)),
-    case lists:keymember(help, 1, Options) of
-        true ->
+    put(verbose, proplists:get_value("verbose", Options)),
+    case kvc:path(help, Options) of
+        enabled ->
             opt:help(AvailableOpts), halt(0);
-        false ->
-            log:to_file("~s~n", [printable(Options)]),
+        _ ->
+            log:to_file("OPTIONS: ~s~n", [printable(Options)]),
             Env = env:inspect(Options),
-            log:to_file("~s~n", [printable(Env)]),
-            apply_config(Env, Rules, Options)
+            apply_rules(Env, Rules, Options)
     end.
 
-apply_config(Env, Rules, Options) ->
+apply_rules(Env, Rules, Options) ->
     Checks = proplists:get_value(checks, Rules, []),
     Results = [ check:check(Check, Env, Options) || Check <- Checks ],
     case [ C || C <- Results, C#check.result =/= 'passed' andalso
@@ -50,7 +49,16 @@ apply_config(Env, Rules, Options) ->
         Failures ->
             [ write_failure_logs(C) || C <- Failures ],
             abort("Cannot proceed. Please fix these issues and try again.~n")
-    end.
+    end,
+    Templates = apply_templates(Results, Env, Rules, Options),
+    apply_warnings(Results, Templates, Env, Rules, Options).
+
+apply_templates(Checks, Env, Rules, Config) ->
+    Templates = proplists:get_value(templates, Rules, []),
+    [ template:render(T, Checks, Env, Config) || T <- Templates ].
+
+apply_warnings(_Results, _Templates, _Env, _Rules, _Options) ->
+    ok.
 
 write_failure_logs(#check{ name=Name, output=Err }) ->
     log:out("Mandatory Check ~p failed. "
@@ -58,6 +66,11 @@ write_failure_logs(#check{ name=Name, output=Err }) ->
     log:to_file("ERROR: ~s: ~s~n", [Name, Err]).
 
 %% Utilities
+
+as_string(Thing) when is_atom(Thing) ->
+    atom_to_list(Thing);
+as_string(Thing) when is_list(Thing) ->
+    Thing.
 
 printable(Term) ->
     erl_prettypr:format(erl_parse:abstract(Term))  ++ ".".

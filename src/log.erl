@@ -26,7 +26,7 @@
 -export([verbose/1, verbose/2, out/1, out/2, to_file/1, to_file/2]).
 
 logfile() ->
-    env:relative_path(["build", "cache", "config.log"]).
+    env:cached_filename("config.log").
 
 reset() ->
     TimeStamp = io_lib:format(lists:duplicate(82, "-") ++ "~n" ++

@@ -28,22 +28,23 @@
 -export([find_executable/1, find_executable/2]).
 -export([executable_name/1, library_path_env/1, path_sep/1]).
 -export([locate_library/2, detect_arch/1, load_path/1]).
--export([code_dir/0, relative_path/1]).
+-export([code_dir/0, relative_path/1, cached_filename/1]).
 
 -export([inspect/1]).
 
 %% TODO: refactor the inspect_? code to pass around the OS type/family and match on it
 
 inspect(Options) ->
-    OptFile = relative_path(["build", "cache", "config.options"]),
+    OptFile = cached_filename("config.options"),
     log:out("writing config.options to ~s~n", [OptFile]),
     file:write_file(OptFile, libconf:printable(Options)),
     run_inspect_env(OptFile, Options, false),
-    ErlEnv = file:consult(relative_path(["build", "cache", "config.cache"])),
+    {ok, [ErlEnv]} = file:consult(cached_filename("config.cache")),
     OS = inspect_os(),
     Arch = detect_os_arch(OS),
     WordSize = detect_long_bit(OS),
-    #os_conf{ os=OS, arch=Arch, wordsize=WordSize, erlang=ErlEnv }.
+    Conf = #os_conf{ os=OS, arch=Arch, wordsize=WordSize, erlang=ErlEnv },
+    log:to_file("ENVIRONMENT: ~s~n", [libconf:printable(Conf)]), Conf.
 
 run_inspect_env(OptFile, Options, true) ->
     BinDir = filename:join(proplists:get_value("erlang", Options), "bin"),
@@ -95,7 +96,7 @@ run_external(Escript, OptFile) ->
     end.
 
 ensure_load_env_module() ->
-    File = relative_path(["build", "cache", "load_env.erl"]),
+    File = cached_filename("load_env.erl"),
     case filelib:is_regular(File) of
         true ->
             File;
@@ -231,6 +232,9 @@ code_dir() ->
         false -> code:lib_dir();
         Path  -> Path
     end.
+
+cached_filename(Name) ->
+    relative_path(["build", "cache", Name]).
 
 relative_path(SuffixList) ->
     filename:absname(filename:join(filename:dirname(escript:script_name()),

@@ -27,21 +27,22 @@
 
 check(C=#check{ name=Name, type=library, capture=Capture,
     data=#require{ include=Include, path=LibPath, find=Find,
-        incl_path=InclPath, code_path=CodePath }}, #os_conf{ os=OS }, Config) ->
+        incl_path=InclPath, code_path=CodePath }=D}, #os_conf{ os=OS }, Config) ->
 
-    NameAsString = as_string(Name),
-    log:out("check ~s... ", [NameAsString]),
-    Result = case env:locate_library(opt:eval(LibPath, Config), 
+    NameAsString = libconf:as_string(Name),
+    log:out("checking ~s... ", [NameAsString]),
+    Result = case env:locate_library(opt:eval(LibPath, Config),
                                      opt:eval(Find, Config)) of
         undefined ->
-            C#check{ result='failed', output=as_string(Name) ++ " not found" };
-        #library{ lib=_SoFile, arch=LibArch } ->
+            C#check{ result='failed', 
+                     output=libconf:as_string(Name) ++ " not found" };
+        #library{ path=LocPath, lib=_SoFile, arch=LibArch } ->
             LdPath = [ opt:eval(I, Config) || I <- CodePath ],
             IncludePath = [ opt:eval(I, Config) || I <- InclPath ],
             Src = check_lib(NameAsString, Include, Capture),
-            Target = filename:join(filename:dirname(Src), 
+            Target = filename:join(filename:dirname(Src),
                                    filename:basename(Src, ".c")),
-            case cc:compile_and_link(Src, Target, IncludePath,
+            Res = case cc:compile_and_link(Src, Target, IncludePath,
                                      LdPath, LibArch, OS, Config) of
                 {error, ErrMsg} when is_list(ErrMsg) ->
                     C#check{ result='failed', output=ErrMsg };
@@ -52,14 +53,31 @@ check(C=#check{ name=Name, type=library, capture=Capture,
                         undefined ->
                             C#check{ result='passed', output=StdOut };
                         _Defined ->
-                            case sh:exec(Target) of
+                            TargetOutputLog = Target ++ ".log",
+                            case sh:exec(Target ++ " | tee " ++ TargetOutputLog) of
                                 {error, {_Rc, ErrTxt}} ->
                                     C#check{ result='failed', output=ErrTxt };
+                                {ok, []} ->
+                                    case file:read_file(TargetOutputLog) of
+                                        {ok, Bin} ->
+                                            C#check{ result='passed', output=Bin };
+                                        _Err ->
+                                            C#check{ result='failed', 
+                                                     output="N/A" }
+                                    end;
                                 {ok, Output} ->
                                     C#check{ result='passed', output=Output }
                             end
                     end
-            end
+            end,
+            Res#check{
+                data=D#require{
+                    path=LocPath,
+                    arch=LibArch,
+                    incl_path=IncludePath,
+                    code_path=LdPath
+                }
+            }
     end,
     log:out("~p~n", [Result#check.result]),
     Result.
@@ -79,8 +97,3 @@ check_lib(Name, Include, Capture) ->
 
 outdir() ->
     env:relative_path(["build", "cache"]).
-
-as_string(Thing) when is_atom(Thing) ->
-    atom_to_list(Thing);
-as_string(Thing) when is_list(Thing) ->
-    Thing.
