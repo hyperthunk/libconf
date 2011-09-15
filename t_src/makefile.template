@@ -43,6 +43,8 @@ build:
 docs:
 	@($(REBAR) skip_deps=true doc)
 
+{% if makefile_extras %}
 {{ makefile_extras }}
+{% endif %}
 
 .PHONY: all info build docs

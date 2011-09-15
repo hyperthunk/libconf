@@ -71,7 +71,14 @@ render(T0=#template{name=Name, module=Mod, defaults=Defaults},
 
     case Template:render(Vars) of
         {ok, Bin} ->
-            ok = file:write_file(TempFileLocation, Bin, [write]);
+            ok = file:write_file(TempFileLocation, Bin, [write]),
+            DestFile = T1#template.output,
+            case filelib:is_regular(DestFile) of
+                true  ->
+                    ok = file:write_file(DestFile, Bin, [append]);
+                false ->
+                    {ok, _} = file:copy(TempFileLocation, DestFile)
+            end;
         Other ->
             libconf:abort("ERROR: failed to write template ~p: ~p~n",
                           [Name, Other])
