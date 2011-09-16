@@ -31,10 +31,16 @@ compile(Src, IncludePath, _OS, Config) ->
         false ->
             {error, "Compiler Unavailable"};
         CC ->
+            Target = filename:join(filename:dirname(Src),
+                                   filename:basename(Src, ".c")) ++ ".o",
             IncludeFlags = string:join([ "-I" ++ I || I <- IncludePath ], " "),
-            Cmd = lists:flatten(io_lib:format("~s ~s ~s", 
-                                [CC, IncludeFlags, Src])),
-            sh:exec(Cmd)
+            Cmd = lists:flatten(io_lib:format("~s -v -c ~s -o ~s ~s", 
+                                [CC, IncludeFlags, Target, Src])),
+            case sh:exec(Cmd) of
+                {_, Output}=R ->
+                    log:to_file("~s", [Output]), R;
+                Other -> Other
+            end
     end.
 
 compile_and_link(Src, Target, IncludePath, LdPath, LibArch, OS, Config) ->
@@ -44,11 +50,15 @@ compile_and_link(Src, Target, IncludePath, LdPath, LibArch, OS, Config) ->
         CC ->
             ArchFlags = calculate_arch_flags(LibArch),
             IncludeFlags = string:join([ "-I" ++ I || I <- IncludePath ], " "),
-            Cmd = lists:flatten(io_lib:format("~s ~s ~s -o ~s ~s", 
+            Cmd = lists:flatten(io_lib:format("~s -v ~s ~s -o ~s ~s", 
                         [CC, ArchFlags, IncludeFlags, Target, Src])),
             LinkerEnv = string:join(LdPath, env:path_sep(OS)),
             LinkerVar = env:library_path_env(OS),
-            sh:exec(Cmd, [{env, [{LinkerVar, LinkerEnv}]}])
+            case sh:exec(Cmd, [{env, [{LinkerVar, LinkerEnv}]}]) of
+                {_, Output}=R ->
+                    log:to_file("~s", [Output]), R;
+                Other -> Other
+            end
     end.
 
 find_compiler(Options) ->

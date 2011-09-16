@@ -44,7 +44,7 @@ exec(Command, Env) ->
     %    _ ->
     %        Command0
     %end,
-    log:verbose("exec `~s'~n", [Command]),
+    log:to_file("exec `~s'~n", [Command]),
     PortSettings = [exit_status, {line, 16384}, stderr_to_stdout, hide],
     sh_loop(open_port({spawn, Command}, PortSettings ++ Env), []).
 
