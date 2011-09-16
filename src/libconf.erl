@@ -30,7 +30,7 @@
 copyright() ->
     Defaults = copyright_default(),
     {{Y,_,_},_} = calendar:universal_time(),
-    Conf = case filelib:fold_files(env:root_dir(), "copyright.config", true,
+    case filelib:fold_files(env:root_dir(), "copyright.config", true,
                                    fun(F, Acc) -> [F|Acc] end, []) of
         [] ->
             Defaults;

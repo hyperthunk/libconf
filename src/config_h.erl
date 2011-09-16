@@ -25,7 +25,14 @@
 -include("libconf.hrl").
 -export([pre_render/4]).
 
-pre_render(T=#template{ defaults=Defaults }, CheckData, OsEnv, Config) ->
+pre_render(T=#template{ defaults=Defaults }, CheckData, 
+           #os_conf{ os={OS, Vsn}, arch=Arch, wordsize=WordSize }, _Config) ->
     NewDefines = [ Def || #check{ output=Def } <- CheckData ],
     NewDefaults = lists:keystore(defines, 1, Defaults, {defines, NewDefines}),
-    T#template{ defaults=NewDefaults }.
+    OsEnv = {environment, [
+        [{name, "_LIBCONF_OS_NAME"}, {value, OS}],
+        [{name, "_LIBCONF_OS_VSN"}, {value, Vsn}],
+        [{name, "_LIBCONF_OS_ARCH"}, {value, Arch}],
+        [{name, "_LIBCONF_OS_WORDSIZE"}, {value, WordSize}]
+    ]},
+    T#template{ defaults=[OsEnv|NewDefaults] }.
