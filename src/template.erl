@@ -25,7 +25,7 @@
 -include("libconf.hrl").
 -export([render/4]).
 
-render(T0=#template{name=Name, module=Mod, defaults=Defaults},
+render(T0=#template{ name=Name, module=Mod },
         Checks, OsEnv, Config) ->
     %% the vars passed to the template will contain
     %% (a) config: defaults set by the template itself
@@ -37,8 +37,10 @@ render(T0=#template{name=Name, module=Mod, defaults=Defaults},
 
     %% templates must specify which check and/or check-data items they use
     CheckData = filter(checks, T0, Checks),
+    log:to_file("found checks: ~p~n", [CheckData]),
 
     %% templates can add an optional module location for pre-processing
+    code:ensure_loaded(T0#template.pre_render),
     T1 = case erlang:function_exported(T0#template.pre_render, pre_render, 4) of
         false ->
             log:to_file("~p has no pre_render hook.~n", [Name]), T0;
@@ -49,13 +51,15 @@ render(T0=#template{name=Name, module=Mod, defaults=Defaults},
             PreRenderMod:pre_render(T0, CheckData, OsEnv, Config)
     end,
 
+    log:to_file("post_hook template state: ~n" ++ libconf:printable(T1) ++ "~n"),
+
     %% template defaults are also pre-processed for interpolated values/expressions
     Data = filter(data, T1, Checks),
     VarList = [{options, Config}, unpack(OsEnv)] ++ CheckData ++ Data,
-    Defaults2 = case Defaults of
+    Defaults2 = case T1#template.defaults of
         [] -> [];
         _ ->
-            [ {K, opt:eval(Val, VarList)} || {K, Val} <- Defaults ]
+            [ {K, opt:eval(Val, VarList)} || {K, Val} <- T1#template.defaults ]
     end,
     FullVars = [{config, Defaults2}] ++ VarList ++ libconf:copyright(),
     log:to_file("evaluating ~p with vars ~p~n", [Name, FullVars]),
@@ -86,12 +90,13 @@ render(T0=#template{name=Name, module=Mod, defaults=Defaults},
 filter(checks, #template{ checks=undefined }, _) ->
     [];
 filter(checks, #template{ checks=Required }, Checks) ->
-    [ unpack(C, all) || R <- Required, C=#check{name=N} <- Checks, N == R ];
+    log:to_file("filtering ~p against ~p~n", [Checks, Required]),
+    [ unpack(C, all) || R <- Required, C=#check{ name=N } <- Checks, N =:= R ];
 filter(data, #template{ data=undefined }, _) ->
     [];
 filter(data, #template{ data=Required }, Checks) ->
     [ unpack(C#check{name=rename(N)}, F) ||
-                {R, F} <- Required, C=#check{name=N} <- Checks, N == R ].
+                {R, F} <- Required, C=#check{name=N} <- Checks, N =:= R ].
 
 rename(N) when is_atom(N) ->
     rename(atom_to_list(N));

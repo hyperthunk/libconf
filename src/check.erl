@@ -25,29 +25,48 @@
 -include("libconf.hrl").
 -export([check/3]).
 
-check(C=#check{ name=Name, type=library, capture=Capture,
-    data=#require{ include=Include, path=LibPath, find=Find,
-        incl_path=InclPath, code_path=CodePath }=D}, #os_conf{ os=OS }, Config) ->
-
+check(C=#check{ name=Name }, Env, Config) ->
     NameAsString = libconf:as_string(Name),
     log:out("checking ~s... ", [NameAsString]),
-    Result = case env:locate_library(opt:eval(LibPath, Config),
+    log:to_file("pre-check data: " ++ libconf:printable(C) ++ "~n"),
+    Result = do_check(NameAsString, C, Env, Config),
+    log:out("~p~n", [Result#check.result]),
+    log:to_file("post-check data: " ++ libconf:printable(Result) ++ "~n"),
+    Result.
+
+do_check(NameAsString, C=#check{ type=include, capture=Capture,
+            data=#require{ include=Include, incl_path=InclPath} }, 
+            #os_conf{ os=OS }, Config) ->
+    IncludePath = [ opt:eval(I, Config) || I <- InclPath ],
+    Src = generate_check_source(NameAsString, Include, Capture),
+    case cc:compile(Src, IncludePath, OS, Config) of
+        {error, ErrMsg} when is_list(ErrMsg) ->
+            fail(C, ErrMsg);
+        {error, {_Rc, StdIo}} ->
+            fail(C, StdIo);
+        {ok, _StdOut} ->
+            C#check{ result='passed' }
+    end;
+do_check(NameAsString, C=#check{ name=Name, type=library, capture=Capture,
+            data=#require{ include=Include, path=LibPath, find=Find, 
+            incl_path=InclPath, code_path=CodePath }=D}, 
+            #os_conf{ os=OS }, Config) ->
+    case env:locate_library(opt:eval(LibPath, Config),
                                      opt:eval(Find, Config)) of
         undefined ->
-            C#check{ result='failed', 
-                     output=libconf:as_string(Name) ++ " not found" };
+            fail(C, libconf:as_string(Name) ++ " not found");
         #library{ path=LocPath, lib=_SoFile, arch=LibArch } ->
             LdPath = [ opt:eval(I, Config) || I <- CodePath ],
             IncludePath = [ opt:eval(I, Config) || I <- InclPath ],
-            Src = check_lib(NameAsString, Include, Capture),
+            Src = generate_check_source(NameAsString, Include, Capture),
             Target = filename:join(filename:dirname(Src),
                                    filename:basename(Src, ".c")),
             Res = case cc:compile_and_link(Src, Target, IncludePath,
                                      LdPath, LibArch, OS, Config) of
                 {error, ErrMsg} when is_list(ErrMsg) ->
-                    C#check{ result='failed', output=ErrMsg };
+                    fail(C, ErrMsg);
                 {error, {_Rc, StdIo}} ->
-                    C#check{ result='failed', output=StdIo };
+                    fail(C, StdIo);
                 {ok, StdOut} ->
                     case Capture of
                         undefined ->
@@ -78,11 +97,12 @@ check(C=#check{ name=Name, type=library, capture=Capture,
                     code_path=LdPath
                 }
             }
-    end,
-    log:out("~p~n", [Result#check.result]),
-    Result.
+    end.
 
-check_lib(Name, Include, Capture) ->
+fail(Check, Output) ->
+    Check#check{ result='failed', output=Output }.
+
+generate_check_source(Name, Include, Capture) ->
     Vars = case Capture of
         undefined ->
             [{incl, Include}];

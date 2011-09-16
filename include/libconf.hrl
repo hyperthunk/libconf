@@ -38,8 +38,8 @@
     arch        = unknown   :: arch(),
     find                    :: string(),
     include                 :: string(),
-    incl_path               :: [string()],
-    code_path               :: [string()]
+    incl_path   = []        :: [string()],
+    code_path   = []        :: [string()]
 }).
 
 -record(template, {

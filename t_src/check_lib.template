@@ -2,6 +2,6 @@
 #include <{{ incl }}>
 
 int main() {
-    {{ stdout_check }}
+    {% if stdout_check %}{{ stdout_check }}{% endif %}
     return( 0 );
 };

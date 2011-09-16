@@ -22,9 +22,20 @@
 %% -----------------------------------------------------------------------------
 -module(cc).
 
--export([compile_and_link/7]).
+-export([compile/4, compile_and_link/7]).
 -export([find_compiler/1]).
 -export([calculate_arch_flags/1]).
+
+compile(Src, IncludePath, _OS, Config) ->
+    case find_compiler(Config) of
+        false ->
+            {error, "Compiler Unavailable"};
+        CC ->
+            IncludeFlags = string:join([ "-I" ++ I || I <- IncludePath ], " "),
+            Cmd = lists:flatten(io_lib:format("~s ~s ~s", 
+                                [CC, IncludeFlags, Src])),
+            sh:exec(Cmd)
+    end.
 
 compile_and_link(Src, Target, IncludePath, LdPath, LibArch, OS, Config) ->
     case find_compiler(Config) of

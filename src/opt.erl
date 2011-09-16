@@ -24,13 +24,15 @@
 
 -export([parse_args/2, help/1, eval/2]).
 
-eval(S, Opts) ->
+eval([H|_]=S, Opts) when is_integer(H) ->
     case re:split(S, "(\\$|\\%)\\{([^\\}]*)\\}", [{return, list}, trim]) of
         [Data] ->
             Data;
         Parts when is_list(Parts) ->
             lists:flatten(lists:reverse(lists:foldl(merge_opts(Opts), [], Parts)))
-    end.
+    end;
+eval(S, _) ->
+    S.
 
 merge_opts(Opts) ->
     fun(E, [H|Acc]) when H == "$" ->

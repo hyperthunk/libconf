@@ -42,7 +42,7 @@ log(SCM) ->
 userinfo() ->
     userinfo(detect()).
 
-userinfo(hg) ->
+userinfo([hg]) ->
     case re:run(env:trim_cmd("hg showconfig ui.username"), 
                 "^(?<username>.*) <(?<email>.*)>$", 
                 [{capture,[username, email], list}]) of
@@ -51,7 +51,7 @@ userinfo(hg) ->
         _ ->
             unknown
     end;
-userinfo(git) ->
+userinfo([git]) ->
     User = env:trim_cmd("git config --get user.name"),
     Email = env:trim_cmd("git config --get user.email"),
     {User, Email}.

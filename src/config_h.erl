@@ -25,14 +25,26 @@
 -include("libconf.hrl").
 -export([pre_render/4]).
 
-pre_render(T=#template{ defaults=Defaults }, CheckData, 
+pre_render(T=#template{ output=Dest, defaults=Defaults }, CheckData, 
            #os_conf{ os={OS, Vsn}, arch=Arch, wordsize=WordSize }, _Config) ->
-    NewDefines = [ Def || #check{ output=Def } <- CheckData ],
+    file:delete(Dest),
+    NewDefines = [ proplists:get_value(output, CList) || {_, CList} <- CheckData ],
     NewDefaults = lists:keystore(defines, 1, Defaults, {defines, NewDefines}),
     OsEnv = {environment, [
-        [{name, "_LIBCONF_OS_NAME"}, {value, OS}],
-        [{name, "_LIBCONF_OS_VSN"}, {value, Vsn}],
-        [{name, "_LIBCONF_OS_ARCH"}, {value, Arch}],
+        [{name, "_LIBCONF_OS_NAME"}, {value, "\"" ++ OS ++ "\""}],
+        [{name, "_LIBCONF_OS_ARCH"}, {value, "\"" ++ atom_to_list(Arch) ++ "\""}],
         [{name, "_LIBCONF_OS_WORDSIZE"}, {value, WordSize}]
-    ]},
+    ] ++ os_version_info(Vsn)},
     T#template{ defaults=[OsEnv|NewDefaults] }.
+
+os_version_info(Parts=[Maj, Min, Rel]) ->
+    [[{name, "_LIBCONF_OS_VERSION_MAJOR"}, {value, Maj}],
+     [{name, "_LIBCONF_OS_VERSION_MINOR"}, {value, Min}],
+     [{name, "_LIBCONF_OS_VERSION_REL"}, {value, Rel}],
+     [{name, "_LIBCONF_OS_VERSION_STRING"}, 
+        {value, "\"" ++ string:join([ integer_to_list(N) || 
+                                            N <- Parts ], ".") ++ "\""}]];
+os_version_info([H|_]=String) when is_integer(H) ->
+    os_version_info(string:tokens(String, "."));
+os_version_info(_) ->
+    [].

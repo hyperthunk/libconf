@@ -3,9 +3,10 @@
 
 #ifndef _CONFIG_H
 #define _CONFIG_H
-
 {% for def in config.defines %}
 #define {{ def }} 1
 {% endfor %}
-
+{% for item in config.environment %}
+#define {{ item.name }} {{ item.value }}
+{% endfor %}
 #endif /* _CONFIG_H */

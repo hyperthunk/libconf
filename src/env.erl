@@ -28,7 +28,7 @@
 -export([find_executable/1, find_executable/2]).
 -export([executable_name/1, library_path_env/1, path_sep/1]).
 -export([locate_library/2, detect_arch/1, load_path/1]).
--export([code_dir/0, relative_path/1, 
+-export([code_dir/0, relative_path/1, trim_cmd/1,
          cached_filename/1, root_dir/0, username/0]).
 
 -export([inspect/1]).
