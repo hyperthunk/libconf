@@ -28,7 +28,8 @@
 -export([find_executable/1, find_executable/2]).
 -export([executable_name/1, library_path_env/1, path_sep/1]).
 -export([locate_library/2, detect_arch/1, load_path/1]).
--export([code_dir/0, relative_path/1, cached_filename/1]).
+-export([code_dir/0, relative_path/1, 
+         cached_filename/1, root_dir/0, username/0]).
 
 -export([inspect/1]).
 
@@ -224,6 +225,10 @@ os_vsn() ->
 uname(Flag) ->
     trim_cmd(os:cmd("uname " ++ Flag)).
 
+username() ->
+    %% TODO: fix for various platforms
+    trim_cmd(os:cmd("whoami")).
+
 trim_cmd(Output) ->
     re:replace(Output, "\\s", "", [{return, list}]).
 
@@ -236,6 +241,9 @@ code_dir() ->
 cached_filename(Name) ->
     relative_path(["build", "cache", Name]).
 
+root_dir() ->
+    filename:dirname(escript:script_name()).
+
 relative_path(SuffixList) ->
-    filename:absname(filename:join(filename:dirname(escript:script_name()),
-                     filename:join(SuffixList))).
+    filename:absname(filename:join(root_dir()),
+                     filename:join(SuffixList)).

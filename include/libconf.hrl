@@ -43,14 +43,14 @@
 }).
 
 -record(template, {
-    name        :: string(),
-    module      :: atom(),
-    pre_render  :: atom(),
-    post_render :: atom(),
-    output      :: string(),
-    checks      :: [string() | atom()],
-    data        :: [{string() | atom(), atom()}],
-    defaults    :: [term()]
+    name                :: string(),
+    module              :: atom(),
+    pre_render          :: atom(),
+    post_render         :: atom(),
+    output              :: string(),
+    checks              :: [string() | atom()],
+    data                :: [{string() | atom(), atom()}],
+    defaults    = []    :: [term()]
 }).
 
 -record(library, {

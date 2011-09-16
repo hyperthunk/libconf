@@ -24,7 +24,32 @@
 
 -include("libconf.hrl").
 -export([abort/1, abort/2]).
+-export([copyright/0]).
 -export([configure/3, printable/1, as_string/1]).
+
+copyright() ->
+    Defaults = copyright_default(),
+    {{Y,_,_},_} = calendar:universal_time(),
+    Conf = case filelib:fold_files(env:root_dir(), "copyright.config", true,
+                                   fun(F, Acc) -> [F|Acc] end, []) of
+        [] ->
+            Defaults;
+        [P|_] ->
+            case file:consult(P) of
+                {ok, Data} ->
+                    [{year, Y}|Data];
+                _ ->
+                    Defaults
+            end
+    end.
+
+copyright_default() ->
+    case scm:userinfo() of
+        {User, Email} ->
+            [{author, User}, {email, Email}];
+        _ ->
+            [{author, env:username()}, {email, ""}]
+    end.
 
 configure(Args, AvailableOpts, Rules) ->
     log:reset(),

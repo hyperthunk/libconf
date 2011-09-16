@@ -35,6 +35,9 @@ render(T0=#template{name=Name, module=Mod, defaults=Defaults},
     %% (e) for each #check{} record, a proplist of its data mapped to <name>_data
     log:verbose("generating ~p~n", [Name]),
 
+    %% templates must specify which check and/or check-data items they use
+    CheckData = filter(checks, T0, Checks),
+
     %% templates can add an optional module location for pre-processing
     T1 = case erlang:function_exported(T0#template.pre_render, pre_render, 4) of
         false ->
@@ -43,22 +46,18 @@ render(T0=#template{name=Name, module=Mod, defaults=Defaults},
             PreRenderMod = T0#template.pre_render,
             log:to_file("executing ~p pre_render hook in module ~p~n",
                         [Name, PreRenderMod]),
-            PreRenderMod:pre_render(T0, Checks, OsEnv, Config)
+            PreRenderMod:pre_render(T0, CheckData, OsEnv, Config)
     end,
 
-    %% templates must specify which check and/or check-data items they use
-    CheckData = filter(checks, T1, Checks),
-    Data = filter(data, T1, Checks),
-
     %% template defaults are also pre-processed for interpolated values/expressions
+    Data = filter(data, T1, Checks),
     VarList = [{options, Config}, unpack(OsEnv)] ++ CheckData ++ Data,
     Defaults2 = case Defaults of
-        undefined -> [];
         [] -> [];
         _ ->
             [ {K, opt:eval(Val, VarList)} || {K, Val} <- Defaults ]
     end,
-    FullVars = [{config, Defaults2}] ++ VarList,
+    FullVars = [{config, Defaults2}] ++ VarList ++ libconf:copyright(),
     log:to_file("evaluating ~p with vars ~p~n", [Name, FullVars]),
     Vars = dict:from_list(FullVars),
 

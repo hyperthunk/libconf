@@ -1,4 +1,4 @@
-
+{% copyright line_comment="%%" %}
 -module(load_env).
 -compile(export_all).
 

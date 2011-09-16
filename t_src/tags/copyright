@@ -1,0 +1,23 @@
+{% line_comment %} -----------------------------------------------------------------------------
+{% line_comment %}
+{% line_comment %} Copyright (c) {% year %} {% author %} {% if email %}({% email %}){% endif %}
+{% line_comment %}
+{% line_comment %} Permission is hereby granted, free of charge, to any person obtaining a copy
+{% line_comment %} of this software and associated documentation files (the "Software"), to deal
+{% line_comment %} in the Software without restriction, including without limitation the rights
+{% line_comment %} to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+{% line_comment %} copies of the Software, and to permit persons to whom the Software is
+{% line_comment %} furnished to do so, subject to the following conditions:
+{% line_comment %}
+{% line_comment %} The above copyright notice and this permission notice shall be included in
+{% line_comment %} all copies or substantial portions of the Software.
+{% line_comment %}
+{% line_comment %} THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+{% line_comment %} IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+{% line_comment %} FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+{% line_comment %} AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+{% line_comment %} LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+{% line_comment %} OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+{% line_comment %} THE SOFTWARE.
+{% line_comment %}
+{% line_comment %} -----------------------------------------------------------------------------
