@@ -245,5 +245,4 @@ root_dir() ->
     filename:dirname(escript:script_name()).
 
 relative_path(SuffixList) ->
-    filename:absname(filename:join(root_dir()),
-                     filename:join(SuffixList)).
+    filename:absname(filename:join(root_dir(), filename:join(SuffixList))).
