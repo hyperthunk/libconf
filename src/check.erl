@@ -27,7 +27,6 @@
 
 check(C=#check{ name=Name }, Env, Config) ->
     NameAsString = libconf:as_string(Name),
-    log:out("checking ~s... ", [NameAsString]),
     log:to_file("pre-check data: " ++ libconf:printable(C) ++ "~n"),
     Result = do_check(NameAsString, C, Env, Config),
     log:out("~p~n", [Result#check.result]),
@@ -37,6 +36,7 @@ check(C=#check{ name=Name }, Env, Config) ->
 do_check(NameAsString, C=#check{ type=include, capture=Capture,
             data=#require{ include=Include, incl_path=InclPath} }, 
             #os_conf{ os=OS }, Config) ->
+    log:out("checking ~s .... ", [Include]),
     IncludePath = [ opt:eval(I, Config) || I <- InclPath ],
     Src = generate_check_source(NameAsString, Include, Capture),
     case cc:compile(Src, IncludePath, OS, Config) of
@@ -51,11 +51,15 @@ do_check(NameAsString, C=#check{ name=Name, type=library, capture=Capture,
             data=#require{ include=Include, path=LibPath, find=Find, 
             incl_path=InclPath, code_path=CodePath }=D}, 
             #os_conf{ os=OS }, Config) ->
-    case env:locate_library(opt:eval(LibPath, Config),
-                                     opt:eval(Find, Config)) of
+    log:out("checking ~s .... ", [NameAsString]),
+    LPath = opt:eval(LibPath, Config),
+    LFind = opt:eval(Find, Config),
+    log:to_file("~nsearching for ~s in path ~p ...~n", [LFind, LPath]),
+    case env:locate_library(LPath, LFind) of
         undefined ->
             fail(C, libconf:as_string(Name) ++ " not found");
-        #library{ path=LocPath, lib=_SoFile, arch=LibArch } ->
+        #library{ path=LocPath, lib=SoFile, arch=LibArch } ->
+            log:out("(found ~s) .... ", [SoFile]), 
             LdPath = [ opt:eval(I, Config) || I <- CodePath ],
             IncludePath = [ opt:eval(I, Config) || I <- InclPath ],
             Src = generate_check_source(NameAsString, Include, Capture),
