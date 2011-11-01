@@ -45,6 +45,7 @@
 -record(template, {
     name                :: string(),
     module              :: atom(),
+    template_source     :: string(),
     pre_render          :: atom(),
     post_render         :: atom(),
     output              :: string(),

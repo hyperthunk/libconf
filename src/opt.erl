@@ -44,7 +44,7 @@ merge_opts(Opts) ->
     end.
 
 scope_eval(S, ScopeEnv) ->
-    S2 = re:replace(S, "(([\\w]+)\\.[\\w]+)", "kvc:path(\\1, Bindings)", 
+    S2 = re:replace(S, "(([\\w]+)\\.[\\w]+)", "kvc:path(\\1, Bindings)",
                     [{return, list}]) ++ ".",
     log:to_file("scope_eval [~p] = ", [S2]),
     {ok, Scanned, _} = erl_scan:string(S2),
@@ -72,7 +72,9 @@ parse_args(Args, Options0) ->
                 [{"erlydtl", "Location of erlydtl", "deps/erlydtl/ebin"}]},
              {"--(?<option>.*)",
                 fun([X]) -> {X, enabled} end, [option],
-                [{"verbose",
+                [{"nocache",
+                    "Remove all cache entries prior to executing", disabled},
+                 {"verbose",
                     "Print lots of info out during configure process", disabled},
                  {"help", "Print out help and exit", undefined}]}|Options0];
         true ->

@@ -32,6 +32,7 @@
          cached_filename/1, root_dir/0, username/0]).
 
 -export([inspect/1]).
+-export([clear_cache/0]).
 
 %% TODO: refactor the inspect_? code to pass around the OS type/family and match on it
 
@@ -46,6 +47,17 @@ inspect(Options) ->
     WordSize = detect_long_bit(OS),
     Conf = #os_conf{ os=OS, arch=Arch, wordsize=WordSize, erlang=ErlEnv },
     log:to_file("ENVIRONMENT: ~s~n", [libconf:printable(Conf)]), Conf.
+
+clear_cache() ->
+    CacheDir = relative_path(["build", "cache"]),
+    log:out("cleaning cache-dir ~s~n", [CacheDir]),
+    case file:list_dir(CacheDir) of
+        {ok, Files} ->
+            [ file:delete(filename:join(CacheDir, F)) || F <- Files,
+                                                         F /= "config.log" ];
+        _ ->
+            ok
+    end.
 
 run_inspect_env(OptFile, Options, true) ->
     case locate_escript(proplists:get_value("erlang", Options)) of

@@ -5,9 +5,9 @@
 
 main([OptFile, CacheDir]) ->
     Options = file:consult(OptFile),
-    io:format("writing config cache [~s]~n", 
-              [filename:join(CacheDir, "config.cache")]),
-    file:write_file(filename(), printable(config(Options)), [write]);
+    FileName = filename:join(CacheDir, "config.cache"),
+    io:format("writing config cache [~s]~n", [FileName]),
+    file:write_file(FileName, printable(config(Options)), [write]);
 main([OptFile]) ->
     Options = file:consult(OptFile),
     io:format("writing config cache [~s]~n", [filename()]),

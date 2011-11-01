@@ -60,6 +60,12 @@ configure(Args, AvailableOpts, Rules) ->
             opt:help(AvailableOpts), halt(0);
         _ ->
             log:to_file("OPTIONS: ~s~n", [printable(Options)]),
+            case proplists:get_value("nocache", Options, disabled) of
+                enabled ->
+                    env:clear_cache();
+                _ ->
+                    ok
+            end,
             Env = env:inspect(Options),
             apply_rules(Env, Rules, Options)
     end.
