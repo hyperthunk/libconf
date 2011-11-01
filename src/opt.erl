@@ -69,7 +69,9 @@ parse_args(Args, Options0) ->
         false ->
             [{"--(?<option>.*)",
                 fun([X]) -> {X, enabled} end, [option],
-                [{"verbose",
+                [{"extra_bindir",
+                  "Extra ebin directory (if required) for load_env", undefined},
+                 {"verbose",
                     "Print lots of info out during configure process", disabled},
                  {"help", "Print out help and exit", undefined}]}|Options0];
         true ->

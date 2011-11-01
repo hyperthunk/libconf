@@ -1,4 +1,5 @@
 {% copyright line_comment="%%" %}
+%%! -pa {{ bindir }}
 -module(load_env).
 -compile(export_all).
 

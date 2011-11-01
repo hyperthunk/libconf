@@ -50,14 +50,14 @@ inspect(Options) ->
 run_inspect_env(OptFile, Options, true) ->
     case locate_escript(proplists:get_value("erlang", Options)) of
         {default, Exe} ->
-            run_external(Exe, OptFile);
+            run_external(Exe, OptFile, Options);
         Escript when is_list(Escript) ->
-            run_external(Escript, OptFile)
+            run_external(Escript, OptFile, Options)
     end;
 run_inspect_env(OptFile, Options, false) ->
     case locate_escript(proplists:get_value("erlang", Options)) of
         {default, _Exe} ->
-            Path = ensure_load_env_module(),
+            Path = ensure_load_env_module(Options),
             log:verbose("compiling load_env...~n"),
             case compile:file(Path,
                         [verbose,report_errors,report_warnings,export_all,
@@ -80,11 +80,11 @@ run_inspect_env(OptFile, Options, false) ->
                     run_inspect_env(OptFile, Options, true)
             end;
         Escript when is_list(Escript) ->
-            run_external(Escript, OptFile)
+            run_external(Escript, OptFile, Options)
     end.
 
-run_external(Escript, OptFile) ->
-    LoadEnvModule = ensure_load_env_module(),
+run_external(Escript, OptFile, Options) ->
+    LoadEnvModule = ensure_load_env_module(Options),
     LoaderResults = sh:exec(Escript ++ " " ++ LoadEnvModule ++ " " ++ OptFile),
     case LoaderResults of
         {error, {_Rc, _Data}=Err} ->
@@ -94,13 +94,16 @@ run_external(Escript, OptFile) ->
             Ok
     end.
 
-ensure_load_env_module() ->
+ensure_load_env_module(Options) ->
     File = cached_filename("load_env.erl"),
     case filelib:is_regular(File) of
         true ->
             File;
         false ->
-            {ok, Bin} = load_env_template:render(),
+            BinDir = proplists:get_value(extra_bindir, Options, 
+                                         "build/deps/erlydtl/ebin"),
+            Vars = dict:from_list([{bindir, BinDir}]),
+            {ok, Bin} = load_env_template:render(Vars),
             file:write_file(File, list_to_binary(Bin), [write]),
             File
     end.
