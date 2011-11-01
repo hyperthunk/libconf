@@ -67,17 +67,19 @@ option(E, Opts) ->
 parse_args(Args, Options0) ->
     Options = case lists:keymember("--(?<option>.*)", 1, Options0) of
         false ->
-            [{"--(?<option>.*)",
+            [{"--with-(?<lib>.*)=(?<erlydtl>.*)", fun erlang:list_to_tuple/1,
+                    [lib, erlydtl],
+                [{"erlydtl", "Location of erlydtl", "deps/erlydtl/ebin"}]},
+             {"--(?<option>.*)",
                 fun([X]) -> {X, enabled} end, [option],
-                [{"extra_bindir",
-                  "Extra ebin directory (if required) for load_env", undefined},
-                 {"verbose",
+                [{"verbose",
                     "Print lots of info out during configure process", disabled},
                  {"help", "Print out help and exit", undefined}]}|Options0];
         true ->
             libconf:abort("Internal Error: ~n"
                           "The --(option) group is reversed for internal use!")
     end,
+    io:format("Options: ~p~n", [Options]),
     Opts = lists:flatten(lists:foldl(
         fun(Arg, Conf) -> [parse(Arg, Options)|Conf] end, [], Args)),
     apply_defaults(Opts, Options).

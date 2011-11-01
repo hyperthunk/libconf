@@ -59,9 +59,10 @@ run_inspect_env(OptFile, Options, false) ->
         {default, _Exe} ->
             Path = ensure_load_env_module(Options),
             log:verbose("compiling load_env...~n"),
+            CacheDir = relative_path(["build", "cache"]),
             case compile:file(Path,
                         [verbose,report_errors,report_warnings,export_all,
-                         {outdir,relative_path(["build", "cache"])}]) of
+                         {outdir, CacheDir}]) of
                 T when is_tuple(T) ->
                     [H|Rest] = erlang:tuple_to_list(T),
                     case H of
@@ -69,8 +70,8 @@ run_inspect_env(OptFile, Options, false) ->
                             ModName = erlang:hd(Rest),
                             log:out("Running ~p using the current emulator~n",
                                 [ModName]),
-                            code:add_patha(relative_path(["build", "cache"])),
-                            ModName:main([OptFile]);
+                            code:add_patha(CacheDir),
+                            ModName:main([OptFile, CacheDir]);
                         error ->
                             log:out("Unable to compile load_env.erl - "
                                       "trying as external escript command!"),
@@ -100,10 +101,10 @@ ensure_load_env_module(Options) ->
         true ->
             File;
         false ->
-            BinDir = proplists:get_value(extra_bindir, Options, 
-                                         "build/deps/erlydtl/ebin"),
-            Vars = dict:from_list([{bindir, BinDir}]),
-            {ok, Bin} = load_env_template:render(Vars),
+            BinDir = proplists:get_value("erlydtl", Options),
+            log:verbose("erlydtl extra path: ~p~n", [BinDir]),
+            code:add_patha(BinDir),
+            {ok, Bin} = load_env_template:render(),
             file:write_file(File, list_to_binary(Bin), [write]),
             File
     end.
@@ -197,13 +198,13 @@ executable_name(Exe) ->
 detect_arch(LibPath) ->
     grep_for_arch(trim_cmd(os:cmd("file " ++ LibPath))).
 
-detect_os_arch({windows,_}) -> 
+detect_os_arch({windows,_}) ->
     %% TODO: handle on windows
     'x86';
 detect_os_arch(_) ->
     grep_for_arch(uname("-a")).
 
-detect_long_bit({windows,_}) -> 
+detect_long_bit({windows,_}) ->
     %% TODO: fix on windows
     32;
 detect_long_bit(_) ->
@@ -213,7 +214,7 @@ grep_for_arch(String) ->
     case re:run(String, "(64-bit|x86_64|ia64|amd64)", [{capture,first,list}]) of
         {match, [_M|_]} -> 'x86_64';
         _ ->
-            case re:run(String, "(32-bit|i386|i486|i586|i686|x86)", 
+            case re:run(String, "(32-bit|i386|i486|i586|i686|x86)",
                         [{capture,first,list}]) of
                 {match, [_|_]} ->
                     %% TODO: deal with ia32 and amd32

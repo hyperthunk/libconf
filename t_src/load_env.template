@@ -1,8 +1,13 @@
-{% copyright line_comment="%%" %}
 %%! -pa {{ bindir }}
+{% copyright line_comment="%%" %}
 -module(load_env).
 -compile(export_all).
 
+main([OptFile, CacheDir]) ->
+    Options = file:consult(OptFile),
+    io:format("writing config cache [~s]~n", 
+              [filename:join(CacheDir, "config.cache")]),
+    file:write_file(filename(), printable(config(Options)), [write]);
 main([OptFile]) ->
     Options = file:consult(OptFile),
     io:format("writing config cache [~s]~n", [filename()]),
