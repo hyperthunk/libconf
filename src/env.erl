@@ -48,16 +48,14 @@ inspect(Options) ->
     log:to_file("ENVIRONMENT: ~s~n", [libconf:printable(Conf)]), Conf.
 
 run_inspect_env(OptFile, Options, true) ->
-    BinDir = filename:join(proplists:get_value("erlang", Options), "bin"),
-    case locate_escript(BinDir) of
+    case locate_escript(proplists:get_value("erlang", Options)) of
         {default, Exe} ->
             run_external(Exe, OptFile);
         Escript when is_list(Escript) ->
             run_external(Escript, OptFile)
     end;
 run_inspect_env(OptFile, Options, false) ->
-    BinDir = filename:join(proplists:get_value("erlang", Options), "bin"),
-    case locate_escript(BinDir) of
+    case locate_escript(proplists:get_value("erlang", Options)) of
         {default, _Exe} ->
             Path = ensure_load_env_module(),
             log:verbose("compiling load_env...~n"),
@@ -154,9 +152,10 @@ path_sep(_)           -> ":".
 
 locate_escript(undefined) ->
     default_escript_exe();
-locate_escript(Path) ->
-    log:out("checking for escript in path '~s'~n", [Path]),
-    case find_executable("escript", Path) of
+locate_escript(ErlPath) ->
+    BinDir = filename:join(ErlPath, "bin"),
+    log:out("checking for escript in ~s~n", [BinDir]),
+    case find_executable("escript", BinDir) of
         false ->
             locate_escript(undefined);
         Exe ->
