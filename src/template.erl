@@ -61,7 +61,9 @@ render(T0=#template{ name=Name, module=Mod },
         _ ->
             lists:foldl(fun({K, Val}, Acc) ->
                             lists:keyreplace(K, 1, Acc, {K, opt:eval(Val, Acc)})
-                        end, T1#template.defaults, T1#template.defaults)
+                        end,
+                        T1#template.defaults ++ VarList,
+                        T1#template.defaults)
             % [ {K, opt:eval(Val, VarList)} || {K, Val} <- T1#template.defaults ]
     end,
     FullVars = [{config, Defaults2}] ++ VarList ++ libconf:copyright(),

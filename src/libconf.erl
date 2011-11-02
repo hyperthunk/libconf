@@ -55,6 +55,7 @@ configure(Args, AvailableOpts, Rules) ->
     log:reset(),
     Options = opt:parse_args(Args, AvailableOpts),
     put(verbose, proplists:get_value("verbose", Options)),
+    setup_erlydtl_code_path(Options),
     case kvc:path(help, Options) of
         enabled ->
             opt:help(AvailableOpts), halt(0);
@@ -69,6 +70,11 @@ configure(Args, AvailableOpts, Rules) ->
             Env = env:inspect(Options),
             apply_rules(Env, Rules, Options)
     end.
+
+setup_erlydtl_code_path(Options) ->
+    BinDir = proplists:get_value("erlydtl", Options),
+    log:verbose("erlydtl extra path: ~p~n", [BinDir]),
+    code:add_patha(BinDir).
 
 apply_rules(Env, Rules, Options) ->
     Checks = proplists:get_value(checks, Rules, []),

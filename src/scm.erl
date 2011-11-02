@@ -28,7 +28,7 @@ detect() ->
     case file:list_dir(env:root_dir()) of
         {ok, Files} ->
              [ list_to_atom(tl(F)) || 
-                F <- Files, Vcs <- [".hg", ".git"], F == Vcs ];
+                F <- Files, Vcs <- [".hg", ".git", "_darcs"], F == Vcs ];
         _ ->
             unknown
     end.
@@ -49,9 +49,37 @@ userinfo([hg]) ->
         {match, [User,Email|_]} ->
             {User, Email};
         _ ->
-            unknown
+            env:username()
     end;
 userinfo([git]) ->
-    User = env:trim_cmd("git config --get user.name"),
-    Email = env:trim_cmd("git config --get user.email"),
-    {User, Email}.
+    User = case sh:exec("git config --get user.name") of
+        {ok, Usr} ->
+            Usr;
+        _ ->
+            env:username()
+    end,
+    Email = case sh:exec("git config --get user.email") of
+        {ok, Addr} ->
+            Addr;
+        _ ->
+            env:username()
+    end,
+    {env:trim_cmd(User), env:trim_cmd(Email)};
+userinfo([darcs]) ->
+    case env:trim_cmd(sh:exec("darcs show authors")) of
+        {ok, UserInfo} ->
+            case re:run(UserInfo, "[\\d\\s]*(.*)", 
+                        [{capture, all, list}, multiline]) of
+                {match, [_, AUser]} ->
+                    Tokens = string:tokens(AUser, " "),
+                    Email = erlang:hd(lists:reverse(Tokens)),
+                    User = string:join(lists:reverse(
+                        erlang:tl(lists:reverse(Tokens))), " "),
+                    {User, Email};
+                _ -> 
+                    env:username()
+            end;
+        _ ->
+            env:username()
+    end.
+

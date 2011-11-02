@@ -107,15 +107,12 @@ run_external(Escript, OptFile, Options) ->
             Ok
     end.
 
-ensure_load_env_module(Options) ->
+ensure_load_env_module(_Options) ->
     File = cached_filename("load_env.erl"),
     case filelib:is_regular(File) of
         true ->
             File;
         false ->
-            BinDir = proplists:get_value("erlydtl", Options),
-            log:verbose("erlydtl extra path: ~p~n", [BinDir]),
-            code:add_patha(BinDir),
             {ok, Bin} = load_env_template:render(),
             file:write_file(File, list_to_binary(Bin), [write]),
             File
@@ -245,7 +242,7 @@ username() ->
     trim_cmd(os:cmd("whoami")).
 
 trim_cmd(Output) ->
-    re:replace(Output, "\\s", "", [{return, list}]).
+    string:strip(Output, right, $\n).
 
 code_dir() ->
     case os:getenv("ERL_LIBS") of
@@ -257,7 +254,13 @@ cached_filename(Name) ->
     relative_path(["build", "cache", Name]).
 
 root_dir() ->
-    filename:dirname(escript:script_name()).
+    case get(standalone) of
+        undefined ->
+            filename:dirname(escript:script_name());
+        _ ->
+            {ok, Cwd} = file:get_cwd(),
+            filename:dirname(Cwd)
+    end.
 
 relative_path(SuffixList) ->
     filename:absname(filename:join(root_dir(), filename:join(SuffixList))).
