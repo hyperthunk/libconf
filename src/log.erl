@@ -22,6 +22,8 @@
 %% -----------------------------------------------------------------------------
 -module(log).
 
+-include("libconf.hrl").
+
 -export([reset/0]).
 -export([verbose/1, verbose/2, out/1, out/2, to_file/1, to_file/2]).
 
@@ -55,12 +57,18 @@ to_file(Msg) ->
     to_file(Msg, []).
 
 to_file(Msg, Args) ->
-    Data = io_lib:format(Msg, Args),
-    file:write_file(logfile(), Data, [append]).
+    Data = io_lib:format(Msg, cleanup(Args)),
+    file:write_file(logfile(), Data, [append]),
+    Data.
 
 out(Msg) -> out(Msg, []).
 
 out(Msg, Args) ->
-    Data = io_lib:format(Msg, Args),
-    file:write_file(logfile(), Data, [append]),
-    io:format(Data).
+    io:format(to_file(Msg, Args)).
+
+cleanup(Args) when is_list(Args) ->
+    [ cleanup(A) || A <- Args ];
+cleanup(Check=#check{ type=rebar }) ->
+    Check#check{ output=(<<"binary (truncated)...">>) };
+cleanup(Other) ->
+    Other.

@@ -47,27 +47,13 @@ do_check(NameAsString, C=#check{ type=rebar,
                                   data={GitUrl, Branch}, 
                                   capture=DestDir }, _OsConf, _Config) ->
     log:out("checking ~s .... ", [NameAsString]),
-    Path = filename:join(DestDir, "rebar"),
-    Exe = filename:join(Path, "rebar"),
-    log:verbose("checking for rebar binary at ~s~n", [Exe]),
-    case filelib:is_regular(Exe) of
-        true ->
+    case rebar:install(GitUrl, Branch, DestDir) of
+        {exists, Exe} ->
             read_file_to_output(C, Exe);
-        false ->
-            case sh:exec("git clone -b " ++ Branch ++ " " ++ GitUrl ++ " rebar",
-                         [{cd, DestDir}]) of
-                {ok, _Stdout} ->
-                    case sh:exec("./bootstrap", [{cd, Path}]) of
-                        {ok, _} ->
-                            {ok, Bin} = 
-                                file:read_file(Exe),
-                            C#check{ result='passed', output=Bin };
-                        {error, {RC, Reason}} ->
-                            fail(C, integer_to_list(RC) ++ " " ++ Reason)
-                    end;
-                {error, {Ec, Err}} ->
-                    fail(C, integer_to_list(Ec) ++ " " ++ Err)
-            end
+        {installed, Exe} ->
+            read_file_to_output(C, Exe);
+        {error, {Rc, Reason}} ->
+            fail(C, integer_to_list(Rc) ++ " " ++ Reason)
     end;
 do_check(NameAsString, C=#check{ type=include, capture=Capture,
             data=#require{ include=Include, incl_path=InclPath} },

@@ -23,6 +23,7 @@
 -module(scm).
 
 -export([detect/0, log/0, userinfo/0, userinfo/1]).
+-export([get/1, get/2, get/3]).
 
 detect() ->
     case file:list_dir(env:root_dir()) of
@@ -41,6 +42,27 @@ log(SCM) ->
 
 userinfo() ->
     userinfo(detect()).
+
+get(Repo) ->
+    {ok, Cwd} = file:get_cwd(),
+    get(Repo, Cwd).
+
+get(Repo, Dest) ->
+    [Scm] = detect(),
+    get(Scm, Repo, Dest).
+
+%% TODO: support for the other scm providers
+get([Scm], Repo, Dest) when is_atom(Scm) ->
+    get(Scm, Repo, Dest);
+get(git, {Repo, Branch}, DestDir) ->
+    case sh:exec("git clone -b " ++ Branch ++ " " ++ Repo, [{cd, DestDir}]) of
+        {ok, _} ->
+            ok;
+        Err ->
+            Err
+    end;
+get(git, Repo, DestDir) ->
+    get(git, {Repo, "master"}, DestDir).
 
 userinfo([hg]) ->
     case re:run(env:trim_cmd("hg showconfig ui.username"), 

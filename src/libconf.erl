@@ -87,14 +87,19 @@ apply_rules(Env, Rules, Options) ->
             [ write_failure_logs(C) || C <- Failures ],
             abort("Cannot proceed. Please fix these issues and try again.~n")
     end,
-    Templates = apply_templates(Results, Env, Rules, Options),
-    apply_warnings(Results, Templates, Env, Rules, Options).
+    apply_templates(Results, Env, Rules, Options),
+    apply_actions(Results, Env, Rules, Options),
+    apply_warnings(Results, Env, Rules, Options).
 
 apply_templates(Checks, Env, Rules, Config) ->
     Templates = proplists:get_value(templates, Rules, []),
     [ template:render(T, Checks, Env, Config) || T <- Templates ].
 
-apply_warnings(_Results, _Templates, _Env, _Rules, _Options) ->
+apply_actions(Checks, Env, Rules, Config) ->
+    Actions = proplists:get_value(actions, Rules, []),
+    [ action:apply(A, Checks, Env, Config) || A <- Actions ].
+
+apply_warnings(_Results, _Env, _Rules, _Options) ->
     ok.
 
 write_failure_logs(#check{ name=Name, output=Err }) ->

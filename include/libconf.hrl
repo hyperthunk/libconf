@@ -23,6 +23,8 @@
 -type(arch() :: 'x86_64' | 'x86').
 -export_type([arch/0]).
 
+-define(CWD, element(2, file:get_cwd())).
+
 -record(check, {
     mandatory = false   :: boolean(),
     name                :: atom() | string(),
@@ -31,6 +33,14 @@
     capture             :: string() | binary(),
     output              :: string(),
     result              :: 'passed' | 'failed'
+}).
+
+-record(action, {
+    type                :: 'chmod', 
+    target              :: string(),
+    config              :: term(),
+    dir                 :: string(),
+    checks = []         :: [#check{}]
 }).
 
 -record(require, {
