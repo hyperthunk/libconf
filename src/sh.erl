@@ -28,22 +28,6 @@ exec(Command) ->
     exec(Command, []).
 
 exec(Command, Env) ->
-    %Command = case os:type() of
-    %   {win32,_} ->
-    %        [Exe|Rest] = string:tokens(Command0, " "),
-    %        BaseName = filename:basename(Exe, ".exe"),
-    %        BatchFile = BaseName ++ ".bat",
-    %        case filelib:is_regular(BatchFile) of
-    %            true ->
-    %                ok;
-    %            false ->
-    %                ok = file:write_file(BatchFile,
-    %                            io_lib:format("@echo off\n~s %*", [Exe]), [write])
-    %        end,
-    %        string:join([BatchFile|Rest], " ");
-    %    _ ->
-    %        Command0
-    %end,
     log:to_file("exec `~s'~n", [Command]),
     PortSettings = [exit_status, {line, 16384}, stderr_to_stdout, hide],
     sh_loop(open_port({spawn, Command}, PortSettings ++ Env), []).

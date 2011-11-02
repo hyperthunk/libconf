@@ -81,7 +81,11 @@ render(T0=#template{ name=Name, module=Mod },
             DestFile = T1#template.output,
             case filelib:is_regular(DestFile) of
                 true  ->
-                    ok = file:write_file(DestFile, Bin, [append]);
+                    Mode = case T1#template.overwrite of
+                        true -> write;
+                        false -> append
+                    end,
+                    ok = file:write_file(DestFile, Bin, [Mode]);
                 false ->
                     {ok, _} = file:copy(TempFileLocation, DestFile)
             end;

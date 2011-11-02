@@ -25,6 +25,8 @@
 -include("libconf.hrl").
 -export([check/3]).
 
+-define(DEFAULT_REBAR_URL, "git://github.com/basho/rebar.git").
+
 check(C=#check{ name=Name }, Env, Config) ->
     NameAsString = libconf:as_string(Name),
     log:to_file("pre-check data: " ++ libconf:printable(C) ++ "~n"),
@@ -33,8 +35,42 @@ check(C=#check{ name=Name }, Env, Config) ->
     log:to_file("post-check data: " ++ libconf:printable(Result) ++ "~n"),
     Result.
 
+do_check(NameAsString, C=#check{ type=rebar, capture=undefined }, _, _) ->
+    log:out("checking ~s .... ", [NameAsString]),
+    fail(C, "Invalid check config: check.capture must contain "
+            "a valid path to the destination directory");
+do_check(NameAsString, C=#check{ type=rebar, data=undefined },
+        OsConf, Config) ->
+    do_check(NameAsString, C#check{ data={?DEFAULT_REBAR_URL, "HEAD"} },
+             OsConf, Config);
+do_check(NameAsString, C=#check{ type=rebar, 
+                                  data={GitUrl, Branch}, 
+                                  capture=DestDir }, _OsConf, _Config) ->
+    log:out("checking ~s .... ", [NameAsString]),
+    Path = filename:join(DestDir, "rebar"),
+    Exe = filename:join(Path, "rebar"),
+    log:verbose("checking for rebar binary at ~s~n", [Exe]),
+    case filelib:is_regular(Exe) of
+        true ->
+            read_file_to_output(C, Exe);
+        false ->
+            case sh:exec("git clone -b " ++ Branch ++ " " ++ GitUrl ++ " rebar",
+                         [{cd, DestDir}]) of
+                {ok, _Stdout} ->
+                    case sh:exec("./bootstrap", [{cd, Path}]) of
+                        {ok, _} ->
+                            {ok, Bin} = 
+                                file:read_file(Exe),
+                            C#check{ result='passed', output=Bin };
+                        {error, {RC, Reason}} ->
+                            fail(C, integer_to_list(RC) ++ " " ++ Reason)
+                    end;
+                {error, {Ec, Err}} ->
+                    fail(C, integer_to_list(Ec) ++ " " ++ Err)
+            end
+    end;
 do_check(NameAsString, C=#check{ type=include, capture=Capture,
-            data=#require{ include=Include, incl_path=InclPath} }, 
+            data=#require{ include=Include, incl_path=InclPath} },
             #os_conf{ os=OS }, Config) ->
     log:out("checking ~s .... ", [Include]),
     IncludePath = [ opt:eval(I, Config) || I <- InclPath ],
@@ -48,8 +84,8 @@ do_check(NameAsString, C=#check{ type=include, capture=Capture,
             C#check{ result='passed' }
     end;
 do_check(NameAsString, C=#check{ name=Name, type=library, capture=Capture,
-            data=#require{ include=Include, path=LibPath, find=Find, 
-            incl_path=InclPath, code_path=CodePath }=D}, 
+            data=#require{ include=Include, path=LibPath, find=Find,
+            incl_path=InclPath, code_path=CodePath }=D},
             #os_conf{ os=OS }, Config) ->
     log:out("checking ~s .... ", [NameAsString]),
     LPath = opt:eval(LibPath, Config),
@@ -59,7 +95,7 @@ do_check(NameAsString, C=#check{ name=Name, type=library, capture=Capture,
         undefined ->
             fail(C, libconf:as_string(Name) ++ " not found");
         #library{ path=LocPath, lib=SoFile, arch=LibArch } ->
-            log:out("(found ~s) .... ", [SoFile]), 
+            log:out("(found ~s) .... ", [SoFile]),
             LdPath = [ opt:eval(I, Config) || I <- CodePath ],
             IncludePath = [ opt:eval(I, Config) || I <- InclPath ],
             Src = generate_check_source(NameAsString, Include, Capture),
@@ -85,7 +121,7 @@ do_check(NameAsString, C=#check{ name=Name, type=library, capture=Capture,
                                         {ok, Bin} ->
                                             C#check{ result='passed', output=Bin };
                                         _Err ->
-                                            C#check{ result='failed', 
+                                            C#check{ result='failed',
                                                      output="N/A" }
                                     end;
                                 {ok, Output} ->
@@ -102,6 +138,11 @@ do_check(NameAsString, C=#check{ name=Name, type=library, capture=Capture,
                 }
             }
     end.
+
+read_file_to_output(C, File) ->
+    {ok, Bin} = 
+        file:read_file(File),
+    C#check{ result='passed', output=Bin }.
 
 fail(Check, Output) ->
     Check#check{ result='failed', output=Output }.

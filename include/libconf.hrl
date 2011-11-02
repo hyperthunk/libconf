@@ -26,7 +26,7 @@
 -record(check, {
     mandatory = false   :: boolean(),
     name                :: atom() | string(),
-    type                :: 'include' | 'library',
+    type                :: 'include' | 'library' | 'rebar',
     data                :: term(),
     capture             :: string() | binary(),
     output              :: string(),
@@ -51,7 +51,8 @@
     output              :: string(),
     checks              :: [string() | atom()],
     data                :: [{string() | atom(), atom()}],
-    defaults    = []    :: [term()]
+    defaults    = []    :: [term()],
+    overwrite   = false :: boolean()
 }).
 
 -record(library, {

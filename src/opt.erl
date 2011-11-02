@@ -81,7 +81,6 @@ parse_args(Args, Options0) ->
             libconf:abort("Internal Error: ~n"
                           "The --(option) group is reversed for internal use!")
     end,
-    io:format("Options: ~p~n", [Options]),
     Opts = lists:flatten(lists:foldl(
         fun(Arg, Conf) -> [parse(Arg, Options)|Conf] end, [], Args)),
     apply_defaults(Opts, Options).
