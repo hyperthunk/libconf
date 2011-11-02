@@ -49,11 +49,12 @@ scope_eval(S, ScopeEnv) ->
     log:to_file("scope_eval [~p] = ", [S2]),
     {ok, Scanned, _} = erl_scan:string(S2),
     {ok, Parsed} = erl_parse:parse_exprs(Scanned),
-    case erl_eval:exprs(Parsed, [{'Bindings', ScopeEnv}]) of
+    case catch(erl_eval:exprs(Parsed, [{'Bindings', ScopeEnv}])) of
         {value, Val, _} ->
             log:to_file(io_lib:format("~p~n", [Val])), Val;
         Other ->
-            log:to_file(" FAILURE [exception: ~p]~n", [Other]), S
+            log:to_file(" FAILURE [exception: ~p] in ~p~n", [Other, ScopeEnv]),
+            S
     end.
 
 option(E, Opts) ->
