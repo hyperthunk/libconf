@@ -66,22 +66,7 @@ option(E, Opts) ->
 %% Argument Parsing...
 
 parse_args(Args, Options0) ->
-    Options = case lists:keymember("--(?<option>.*)", 1, Options0) of
-        false ->
-            [{"--with-(?<lib>.*)=(?<erlydtl>.*)", fun erlang:list_to_tuple/1,
-                    [lib, erlydtl],
-                [{"erlydtl", "Location of erlydtl", "deps/erlydtl/ebin"}]},
-             {"--(?<option>.*)",
-                fun([X]) -> {X, enabled} end, [option],
-                [{"nocache",
-                    "Remove all cache entries prior to executing", disabled},
-                 {"verbose",
-                    "Print lots of info out during configure process", disabled},
-                 {"help", "Print out help and exit", undefined}]}|Options0];
-        true ->
-            libconf:abort("Internal Error: ~n"
-                          "The --(option) group is reversed for internal use!")
-    end,
+    Options = add_globals(Options0),
     Opts = lists:flatten(lists:foldl(
         fun(Arg, Conf) -> [parse(Arg, Options)|Conf] end, [], Args)),
     apply_defaults(Opts, Options).
@@ -136,7 +121,26 @@ match(Arg, {Rx, Settings, Captures, Filter}) ->
 exit_badarg(Arg) ->
     libconf:abort("Unrecognised Option(s) ~s~n", [Arg]).
 
-help(Options) ->
+add_globals(Options0) ->
+    case lists:keymember("--(?<option>.*)", 1, Options0) of
+        false ->
+            [{"--with-(?<lib>.*)=(?<erlydtl>.*)", fun erlang:list_to_tuple/1,
+                    [lib, erlydtl],
+                [{"erlydtl", "Location of erlydtl", "deps/erlydtl/ebin"}]},
+             {"--(?<option>.*)",
+                fun([X]) -> {X, enabled} end, [option],
+                [{"nocache",
+                    "Remove all cache entries prior to executing", disabled},
+                 {"verbose",
+                    "Print lots of info out during configure process", disabled},
+                 {"help", "Print out help and exit", undefined}]}|Options0];
+        true ->
+            libconf:abort("Internal Error: ~n"
+                          "The --(option) group is reversed for internal use!")
+    end.
+
+help(Options0) ->
+    Options = add_globals(Options0),
     io:format(
 "`configure' configures this package to adapt to any supported system.
 

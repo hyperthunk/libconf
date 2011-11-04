@@ -1,0 +1,89 @@
+
+% type of build environment - standalone (configure.erl only) or rebar.
+% for `rebar' builds, the build_dir needs to contain a rebar-app
+{build_type, rebar}.
+
+% the working location for the build (containing any required files/folders)
+% defaults to the current directory
+{build_dir, "build"}.
+
+% additional stuff to put into the build project's rebar config
+{rebar_config, [
+    {deps, [{econfig, ".*"}]}
+]}.
+
+% The location of any template files - defaults to `build_dir'
+{template_dir, "templates"}.
+
+% name of the `main' escript module
+{build_module, "configure.erl"}.
+
+%%
+%% The build_config is an alernative to build_module, generating the module
+%% definition for you. Whilst local and non-local functions can be used
+%% here, be careful not to assume anything about what code has been loaded.
+%% If you need to, for example, call a libconf module that won't be availble
+%% until *after* bootstrap has completed, use the 'eval' variety of interpolated
+%% string (i.e., "%{mod:func(ArgLiteralOrDotConfigPath)}") as does the 
+%% `main_config' template in the example below
+%%
+{build_config, [
+    {options, [
+        {"--(?<option>.*)=(?<value>.*)", fun erlang:list_to_tuple/1,
+            [option, value],
+            [{"prefix",
+                "Base install directory - defaults to the release folder", "./"},
+             {"resolve_format", "resolve-conf format (see "
+                "http://www.erlang.org/doc/apps/erts/inet_cfg.html for details)",
+                "resolv"},
+             {"resolve_file", "location of the resolve file",
+                "/etc/resolv.conf"}]}
+    ]},
+    {rules, [
+        {checks, [
+            {check, [
+                {type, rebar},
+                {name, rebar},
+                {mandatory, true},
+                {capture, filename:join("build", "deps")},
+                {data, {%"git://github.com/hyperthunk/rebar.git",
+                        "/Users/t4/work/hyperthunk/rebar",
+                        "pub-cmd-alt-deps" }}
+            ]}
+         ]},
+         {templates, [
+            {template, [
+                {name, rebar},
+                {output, "rebar"},
+                {overwrite, true},
+                {checks, [rebar]}
+            ]},
+            {template, [
+                {name, release_vars},
+                {overwrite, true},
+                {output, "release/release.vars" }
+            ]},
+            {template, [
+                {name, main_config},
+                {output, "rebar.config"},
+                {checks, [oci]},
+                {data, [{oci, data}]},
+                {defaults, [
+                    {source_files, [<<"\"c_src/*.c\"">>]},
+                    {object_files, [<<"\"c_src/*.o\"">>]},
+                    {arch_32, "%{cc:calculate_arch_flags('x86')}"},
+                    {arch_64,
+                        "%{cc:calculate_arch_flags(environment.wordsize)}"}
+                ]}
+            ]}
+        ]},
+        {actions, [
+            {action, [
+                {type, chmod},
+                {target, "rebar"},
+                {config, {mode, 8#00100}},
+                {checks, [rebar]}
+            ]}
+        ]}
+    ]}
+]}.
