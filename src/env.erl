@@ -133,7 +133,7 @@ locate_library(Path, Lib) ->
                             fun(F, Acc) -> [F|Acc] end, []) of
         [] ->
             undefined;
-        [LibFile|_] ->
+        [LibFile|_]=Xs ->
             #library{ path=Path, lib=LibFile, arch=detect_arch(LibFile) }
     end.
 
@@ -227,7 +227,9 @@ grep_for_arch(String) ->
                         [{capture,first,list}]) of
                 {match, [_|_]} ->
                     %% TODO: deal with ia32 and amd32
-                    'x86'
+                    'x86';
+                nomatch ->
+                    throw({unable_to_match_arch, String})
             end
     end.
 
